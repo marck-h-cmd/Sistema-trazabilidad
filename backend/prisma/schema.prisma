@@ -1,0 +1,941 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==========================================
+// ENUMS (Enumeradores)
+// ==========================================
+
+enum RolUsuario {
+  ADMINISTRADOR
+  CALIDAD
+  RECEPCION
+  PRODUCCION
+  ALMACEN
+  DESPACHO
+  CLIENTE
+  AUTORIDAD
+}
+
+enum EstadoUsuario {
+  ACTIVO
+  INACTIVO
+  BLOQUEADO
+}
+
+enum EstadoLote {
+  ACTIVO
+  RESERVADO
+  EN_PRODUCCION
+  EN_TRANSITO
+  ENTREGADO
+  VENCIDO
+  BLOQUEADO
+  RETIRADO
+  CONSUMIDO
+}
+
+enum CategoriaProducto {
+  MATERIA_PRIMA
+  PRODUCTO_TERMINADO
+  ENVASE
+  SEMIELABORADO
+}
+
+enum TipoMovimiento {
+  RECEPCION
+  PRODUCCION
+  MOVIMIENTO_INTERNO
+  EXPEDICION
+  DEVOLUCION
+  AJUSTE
+  CONSUMO
+  MERMA
+}
+
+enum EstadoExpedicion {
+  PREPARANDO
+  EN_TRANSITO
+  ENTREGADO
+  CANCELADO
+  DEVUELTO
+}
+
+enum TipoAlerta {
+  CONTAMINACION
+  CUERPO_EXTRAÑO
+  ETIQUETADO
+  CALIDAD
+  INCUMPLIMIENTO_ESPECIFICACIONES
+  OTRO
+}
+
+enum SeveridadAlerta {
+  AVISO
+  CRITICO
+}
+
+enum EstadoAlerta {
+  ABIERTA
+  INVESTIGANDO
+  RESUELTA
+  CERRADA
+}
+
+enum TipoDocumento {
+  PDF
+  IMAGEN
+  EXCEL
+  OTRO
+}
+
+enum FrecuenciaReporte {
+  DIARIO
+  SEMANAL
+  MENSUAL
+  TRIMESTRAL
+}
+
+enum TipoEtiqueta {
+  CODE_128
+  QR
+  AMBOS
+}
+
+// ==========================================
+// TABLA: usuarios
+// ==========================================
+
+model Usuario {
+  id                      String        @id @default(uuid())
+  email                   String        @unique
+  contrasena              String        @map("contrasena")
+  nombre                  String
+  apellido                String
+  rol                     RolUsuario    @default(RECEPCION)
+  estado                  EstadoUsuario @default(ACTIVO)
+  telefono                String?
+  avatar                  String?
+  ultimoInicioSesion      DateTime?     @map("ultimo_inicio_sesion")
+  forzarCambioContrasena  Boolean       @default(true) @map("forzar_cambio_contrasena")
+  
+  // Configuración de escaneo por módulo
+  configuracionEscaneo    Json?         @map("configuracion_escaneo")
+  // Ejemplo: { "recepcion": "opcional", "produccion": "obligatorio", "almacen": "obligatorio" }
+  
+  // Relaciones
+  clienteId               String?       @unique @map("cliente_id")
+  cliente                 Cliente?      @relation(fields: [clienteId], references: [id])
+  proveedorId             String?       @unique @map("proveedor_id")
+  proveedor               Proveedor?    @relation(fields: [proveedorId], references: [id])
+  
+  registrosAuditoria      RegistroAuditoria[]  @relation("UsuarioAuditoria")
+  sesiones                Sesion[]
+  recepciones             Recepcion[]
+  lotesCreados            Lote[]               @relation("LoteCreador")
+  movimientosRealizados   MovimientoLote[]     @relation("MovimientoUsuario")
+  expedicionesCreadas     Expedicion[]         @relation("ExpedicionCreador")
+  alertasCreadas          Alerta[]             @relation("AlertaCreador")
+  simulacrosRealizados    SimulacroAuditoria[] @relation("SimulacroUsuario")
+  
+  creadoEn                DateTime      @default(now()) @map("creado_en")
+  actualizadoEn           DateTime      @updatedAt @map("actualizado_en")
+  
+  @@map("usuarios")
+}
+
+// ==========================================
+// TABLA: sesiones
+// ==========================================
+
+model Sesion {
+  id              String    @id @default(uuid())
+  usuarioId       String    @map("usuario_id")
+  usuario         Usuario   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  token           String    @unique
+  tokenRefresco   String    @unique @map("token_refresco")
+  direccionIp     String?   @map("direccion_ip")
+  agenteUsuario   String?   @map("agente_usuario")
+  expiraEn        DateTime  @map("expira_en")
+  creadoEn        DateTime  @default(now()) @map("creado_en")
+  
+  @@map("sesiones")
+}
+
+// ==========================================
+// TABLA: registros_auditoria
+// ==========================================
+
+model RegistroAuditoria {
+  id              String    @id @default(uuid())
+  usuarioId       String    @map("usuario_id")
+  usuario         Usuario   @relation("UsuarioAuditoria", fields: [usuarioId], references: [id], onDelete: Cascade)
+  accion          String    // CREAR, ACTUALIZAR, ELIMINAR, INICIAR_SESION, CERRAR_SESION, CONSULTAR
+  entidad         String    // Usuario, Producto, Lote, Recepcion, etc.
+  entidadId       String?   @map("entidad_id")
+  valorAnterior   Json?     @map("valor_anterior")
+  valorNuevo      Json?     @map("valor_nuevo")
+  direccionIp     String?   @map("direccion_ip")
+  agenteUsuario   String?   @map("agente_usuario")
+  metadatos       Json?
+  creadoEn        DateTime  @default(now()) @map("creado_en")
+  
+  @@index([usuarioId])
+  @@index([entidad, entidadId])
+  @@index([creadoEn])
+  @@map("registros_auditoria")
+}
+
+// ==========================================
+// TABLA: productos
+// ==========================================
+
+model Producto {
+  id                    String            @id @default(uuid())
+  sku                   String            @unique
+  nombre                String
+  descripcion           String?
+  categoria             CategoriaProducto @default(PRODUCTO_TERMINADO)
+  unidadMedida          String            @default("kg") @map("unidad_medida")
+  // kg, g, L, ml, unidades, cajas, pallets
+  
+  vidaUtilDias          Int               @map("vida_util_dias")
+  requiereCadenaFrio    Boolean           @default(false) @map("requiere_cadena_frio")
+  temperaturaMinima     Float?            @map("temperatura_minima")
+  temperaturaMaxima     Float?            @map("temperatura_maxima")
+  
+  // Configuración para generación de código de lote
+  configuracionLote     Json?             @map("configuracion_lote")
+  // Ejemplo: { "prefijo": "L", "incluirFecha": true, "incluirLinea": true, "incluirTurno": false, "correlativoLongitud": 2 }
+  
+  // Relaciones
+  lotes                       Lote[]
+  materiasPrimas              MateriaPrima[]
+  lineasProduccionProductos   LineaProduccionProducto[]
+  plantillasEtiquetas         PlantillaEtiqueta[]
+  
+  activo                Boolean           @default(true)
+  creadoEn              DateTime          @default(now()) @map("creado_en")
+  actualizadoEn         DateTime          @updatedAt @map("actualizado_en")
+  
+  @@map("productos")
+}
+
+// ==========================================
+// TABLA: proveedores
+// ==========================================
+
+model Proveedor {
+  id                String      @id @default(uuid())
+  codigo            String      @unique
+  nombre            String
+  nif               String      @unique
+  direccion         String
+  ciudad            String
+  pais              String
+  nombreContacto    String      @map("nombre_contacto")
+  emailContacto     String      @map("email_contacto")
+  telefonoContacto  String?     @map("telefono_contacto")
+  utilizaCodigoBarras Boolean   @default(true) @map("utiliza_codigo_barras")
+  
+  // Relaciones
+  usuario           Usuario?
+  materiasPrimas    MateriaPrima[]
+  
+  activo            Boolean     @default(true)
+  creadoEn          DateTime    @default(now()) @map("creado_en")
+  actualizadoEn     DateTime    @updatedAt @map("actualizado_en")
+  
+  @@map("proveedores")
+}
+
+// ==========================================
+// TABLA: clientes
+// ==========================================
+
+model Cliente {
+  id                  String      @id @default(uuid())
+  codigo              String      @unique
+  nombre              String
+  tipo                String      // BODEGA, SUPERMERCADO, TIENDA, RESTAURANTE, DISTRIBUIDOR
+  nif                 String      @unique
+  direccion           String
+  ciudad              String
+  pais                String
+  nombreContacto      String      @map("nombre_contacto")
+  emailContacto       String      @map("email_contacto")
+  telefonoContacto    String?     @map("telefono_contacto")
+  direccionEnvio      String?     @map("direccion_envio")
+  
+  // Relaciones
+  usuario             Usuario?
+  expediciones        Expedicion[]
+  
+  activo              Boolean     @default(true)
+  creadoEn            DateTime    @default(now()) @map("creado_en")
+  actualizadoEn       DateTime    @updatedAt @map("actualizado_en")
+  
+  @@map("clientes")
+}
+
+// ==========================================
+// TABLA: almacenes
+// ==========================================
+
+model Almacen {
+  id          String      @id @default(uuid())
+  codigo      String      @unique
+  nombre      String
+  direccion   String
+  tipo        String      @default("PRINCIPAL") // PRINCIPAL, SECUNDARIO, EXTERNO, TEMPORAL
+  
+  // Relaciones
+  ubicaciones Ubicacion[]
+  lotes       Lote[]
+  
+  activo      Boolean     @default(true)
+  creadoEn    DateTime    @default(now()) @map("creado_en")
+  actualizadoEn DateTime  @updatedAt @map("actualizado_en")
+  
+  @@map("almacenes")
+}
+
+// ==========================================
+// TABLA: ubicaciones
+// ==========================================
+
+model Ubicacion {
+  id            String        @id @default(uuid())
+  almacenId     String        @map("almacen_id")
+  almacen       Almacen       @relation(fields: [almacenId], references: [id], onDelete: Cascade)
+  
+  zona          String        // A, B, C, D
+  pasillo       String        // 01, 02, 03...
+  estanteria    String        // 01, 02, 03...
+  nivel         String        // 01, 02, 03...
+  
+  codigoBarras  String?       @unique @map("codigo_barras")
+  codigoCompleto String       @unique @map("codigo_completo")
+  // Ejemplo: ZONA-A-PASILLO-01-ESTANTERIA-02-NIVEL-03
+  
+  capacidadMaxima Float?      @map("capacidad_maxima")
+  capacidadActual Float       @default(0) @map("capacidad_actual")
+  
+  // Relaciones
+  lotes               Lote[]
+  movimientosOrigen   MovimientoLote[] @relation("MovimientoDesde")
+  movimientosDestino  MovimientoLote[] @relation("MovimientoHacia")
+  
+  activo        Boolean       @default(true)
+  creadoEn      DateTime      @default(now()) @map("creado_en")
+  actualizadoEn DateTime      @updatedAt @map("actualizado_en")
+  
+  @@index([almacenId])
+  @@index([codigoBarras])
+  @@index([codigoCompleto])
+  @@map("ubicaciones")
+}
+
+// ==========================================
+// TABLA: lineas_produccion
+// ==========================================
+
+model LineaProduccion {
+  id            String        @id @default(uuid())
+  codigo        String        @unique // L1, L2, L3
+  nombre        String
+  descripcion   String?
+  codigoBarras  String?       @unique @map("codigo_barras")
+  // Código de barras fijo pegado físicamente en la máquina
+  
+  // Relaciones
+  productos     LineaProduccionProducto[]
+  producciones  Produccion[]
+  
+  activo        Boolean       @default(true)
+  creadoEn      DateTime      @default(now()) @map("creado_en")
+  actualizadoEn DateTime      @updatedAt @map("actualizado_en")
+  
+  @@map("lineas_produccion")
+}
+
+// ==========================================
+// TABLA: lineas_produccion_productos
+// ==========================================
+
+model LineaProduccionProducto {
+  id                String          @id @default(uuid())
+  lineaProduccionId String          @map("linea_produccion_id")
+  lineaProduccion   LineaProduccion @relation(fields: [lineaProduccionId], references: [id], onDelete: Cascade)
+  productoId        String          @map("producto_id")
+  producto          Producto        @relation(fields: [productoId], references: [id], onDelete: Cascade)
+  
+  esPorDefecto      Boolean         @default(false) @map("es_por_defecto")
+  tiempoProduccion  Int?            @map("tiempo_produccion") // minutos estimados
+  
+  creadoEn          DateTime        @default(now()) @map("creado_en")
+  
+  @@unique([lineaProduccionId, productoId])
+  @@map("lineas_produccion_productos")
+}
+
+// ==========================================
+// TABLA: plantillas_etiquetas
+// ==========================================
+
+model PlantillaEtiqueta {
+  id              String        @id @default(uuid())
+  nombre          String
+  productoId      String        @map("producto_id")
+  producto        Producto      @relation(fields: [productoId], references: [id], onDelete: Cascade)
+  
+  tipo            TipoEtiqueta  @default(CODE_128)
+  // CODE_128 para uso interno, QR para consumidor final
+  
+  anchoMm         Float         @default(50) @map("ancho_mm")
+  altoMm          Float         @default(30) @map("alto_mm")
+  
+  camposIncluidos Json          @map("campos_incluidos")
+  // Ejemplo: ["nombre_producto", "codigo_lote", "fecha_produccion", "fecha_caducidad", "codigo_barras"]
+  
+  plantillaHtml   String?       @map("plantilla_html")
+  // HTML personalizado para la etiqueta
+  
+  activo          Boolean       @default(true)
+  creadoEn        DateTime      @default(now()) @map("creado_en")
+  actualizadoEn   DateTime      @updatedAt @map("actualizado_en")
+  
+  @@map("plantillas_etiquetas")
+}
+
+// ==========================================
+// TABLA: lotes (TABLA PRINCIPAL DEL SISTEMA)
+// ==========================================
+
+model Lote {
+  id                  String          @id @default(uuid())
+  codigo              String          @unique
+  // Ejemplo: L260625L301 (L + fecha YYMMDD + línea + correlativo)
+  
+  productoId          String          @map("producto_id")
+  producto            Producto        @relation(fields: [productoId], references: [id])
+  
+  cantidad            Float
+  cantidadInicial     Float           @map("cantidad_inicial")
+  unidadMedida        String          @default("kg") @map("unidad_medida")
+  
+  // Fechas importantes
+  fechaProduccion     DateTime?       @map("fecha_produccion")
+  fechaCaducidad      DateTime?       @map("fecha_caducidad")
+  fechaRecepcion      DateTime?       @map("fecha_recepcion")
+  fechaEnvasado       DateTime?       @map("fecha_envasado")
+  
+  // Estado actual
+  estado              EstadoLote      @default(ACTIVO)
+  
+  // Ubicación actual
+  almacenId           String?         @map("almacen_id")
+  almacen             Almacen?        @relation(fields: [almacenId], references: [id])
+  ubicacionId         String?         @map("ubicacion_id")
+  ubicacion           Ubicacion?      @relation(fields: [ubicacionId], references: [id])
+  
+  // Jerarquía de trazabilidad
+  lotePadreId         String?         @map("lote_padre_id")
+  lotePadre           Lote?           @relation("JerarquiaLotes", fields: [lotePadreId], references: [id])
+  lotesHijos          Lote[]          @relation("JerarquiaLotes")
+  
+  // Relaciones con otras tablas
+  materiasPrimas      MateriaPrima[]
+  produccion          Produccion?
+  movimientos         MovimientoLote[]
+  itemsExpedicion     ItemExpedicion[]
+  alertas             Alerta[]
+  
+  // Información adicional
+  numeroLoteProveedor String?         @map("numero_lote_proveedor")
+  metadatos           Json?
+  observaciones       String?
+  
+  // Responsables
+  creadoPor           String          @map("creado_por")
+  actualizadoPor      String?         @map("actualizado_por")
+  
+  creadoEn            DateTime        @default(now()) @map("creado_en")
+  actualizadoEn       DateTime        @updatedAt @map("actualizado_en")
+  
+  @@index([codigo])
+  @@index([productoId])
+  @@index([estado])
+  @@index([fechaCaducidad])
+  @@index([ubicacionId])
+  @@index([lotePadreId])
+  @@index([creadoEn])
+  @@map("lotes")
+  
+  // Relación con Usuario (creador)
+  creador Usuario @relation("LoteCreador", fields: [creadoPor], references: [id])
+}
+
+// ==========================================
+// TABLA: materias_primas
+// ==========================================
+
+model MateriaPrima {
+  id                      String      @id @default(uuid())
+  
+  // Lote de materia prima
+  loteId                  String      @map("lote_id")
+  lote                    Lote        @relation(fields: [loteId], references: [id], onDelete: Cascade)
+  
+  // Proveedor
+  proveedorId             String      @map("proveedor_id")
+  proveedor               Proveedor   @relation(fields: [proveedorId], references: [id])
+  
+  // Datos del proveedor
+  codigoLoteProveedor     String?     @map("codigo_lote_proveedor")
+  numeroFactura           String?     @map("numero_factura")
+  numeroAlbaran           String?     @map("numero_albaran")
+  
+  cantidad                Float
+  unidadMedida            String      @map("unidad_medida")
+  
+  fechaRecepcion          DateTime    @default(now()) @map("fecha_recepcion")
+  fechaCaducidad          DateTime?   @map("fecha_caducidad")
+  
+  // Control de calidad en recepción
+  temperaturaLlegada      Float?      @map("temperatura_llegada")
+  controlCalidadAprobado  Boolean?    @map("control_calidad_aprobado")
+  observacionesCalidad    String?     @map("observaciones_calidad")
+  
+  // Relación con producción (si ya fue consumida)
+  produccionId            String?     @map("produccion_id")
+  produccion              Produccion? @relation(fields: [produccionId], references: [id])
+  
+  // Documentos adjuntos
+  documentos              Documento[]
+  
+  creadoPor               String      @map("creado_por")
+  creadoEn                DateTime    @default(now()) @map("creado_en")
+  actualizadoEn           DateTime    @updatedAt @map("actualizado_en")
+  
+  @@index([loteId])
+  @@index([proveedorId])
+  @@index([produccionId])
+  @@index([fechaRecepcion])
+  @@map("materias_primas")
+}
+
+// ==========================================
+// TABLA: producciones
+// ==========================================
+
+model Produccion {
+  id                  String          @id @default(uuid())
+  
+  // Lote de producto terminado generado
+  loteId              String          @map("lote_id")
+  lote                Lote            @relation(fields: [loteId], references: [id], onDelete: Cascade)
+  
+  // Línea de producción utilizada
+  lineaProduccionId   String          @map("linea_produccion_id")
+  lineaProduccion     LineaProduccion @relation(fields: [lineaProduccionId], references: [id])
+  
+  // Parámetros del proceso
+  temperaturaHorno    Float?          @map("temperatura_horno")
+  tiempoCoccion       Int?            @map("tiempo_coccion") // minutos
+  humedad             Float?
+  tamanoLote          Float?          @map("tamano_lote")
+  rendimiento         Float?
+  
+  // Materiales consumidos en esta producción
+  materiasPrimas      MateriaPrima[]
+  
+  // Operario responsable
+  operarioId          String          @map("operario_id")
+  operario            Usuario         @relation(fields: [operarioId], references: [id])
+  
+  // Tiempos
+  fechaInicio         DateTime        @default(now()) @map("fecha_inicio")
+  fechaFin            DateTime?       @map("fecha_fin")
+  
+  // Etiquetas
+  etiquetasImpresas   Boolean         @default(false) @map("etiquetas_impresas")
+  tipoEtiqueta        TipoEtiqueta    @default(AMBOS) @map("tipo_etiqueta")
+  cantidadEtiquetas   Int             @default(0) @map("cantidad_etiquetas")
+  
+  // Documentos
+  documentos          Documento[]
+  
+  observaciones       String?
+  
+  creadoPor           String          @map("creado_por")
+  creadoEn            DateTime        @default(now()) @map("creado_en")
+  actualizadoEn       DateTime        @updatedAt @map("actualizado_en")
+  
+  @@index([loteId])
+  @@index([lineaProduccionId])
+  @@index([fechaInicio])
+  @@map("producciones")
+}
+
+// ==========================================
+// TABLA: movimientos_lote
+// ==========================================
+
+model MovimientoLote {
+  id                  String          @id @default(uuid())
+  loteId              String          @map("lote_id")
+  lote                Lote            @relation(fields: [loteId], references: [id], onDelete: Cascade)
+  
+  tipo                TipoMovimiento
+  
+  // Ubicaciones
+  ubicacionOrigenId   String?         @map("ubicacion_origen_id")
+  ubicacionOrigen     Ubicacion?      @relation("MovimientoDesde", fields: [ubicacionOrigenId], references: [id])
+  ubicacionDestinoId  String?         @map("ubicacion_destino_id")
+  ubicacionDestino    Ubicacion?      @relation("MovimientoHacia", fields: [ubicacionDestinoId], references: [id])
+  
+  cantidad            Float
+  unidadMedida        String          @map("unidad_medida")
+  
+  // Documento de referencia
+  referenciaId        String?         @map("referencia_id")
+  referenciaTipo      String?         @map("referencia_tipo")
+  // RECEPCION, PRODUCCION, EXPEDICION
+  
+  // Usuario que realizó el movimiento
+  realizadoPor        String          @map("realizado_por")
+  usuario             Usuario         @relation("MovimientoUsuario", fields: [realizadoPor], references: [id])
+  
+  observaciones       String?
+  
+  creadoEn            DateTime        @default(now()) @map("creado_en")
+  
+  @@index([loteId])
+  @@index([tipo])
+  @@index([creadoEn])
+  @@map("movimientos_lote")
+}
+
+// ==========================================
+// TABLA: recepciones
+// ==========================================
+
+model Recepcion {
+  id                  String        @id @default(uuid())
+  codigo              String        @unique
+  // Ejemplo: REC-260625-001
+  
+  proveedorId         String        @map("proveedor_id")
+  proveedor           Proveedor     @relation(fields: [proveedorId], references: [id])
+  
+  // Método de entrada
+  metodoEntrada       String        @default("MANUAL") @map("metodo_entrada")
+  // ESCANEO_CODIGO_BARRAS, MANUAL
+  
+  // Datos de la recepción
+  fechaRecepcion      DateTime      @default(now()) @map("fecha_recepcion")
+  numeroAlbaran       String?       @map("numero_albaran")
+  numeroFactura       String?       @map("numero_factura")
+  
+  // Productos recibidos (se crean como lotes)
+  lotes               Lote[]
+  
+  // Responsable
+  recibidoPor         String        @map("recibido_por")
+  receptor            Usuario       @relation(fields: [recibidoPor], references: [id])
+  
+  // Documentos
+  documentos          Documento[]
+  
+  estado              String        @default("COMPLETADA")
+  // PENDIENTE, PARCIAL, COMPLETADA, VERIFICADA
+  
+  observaciones       String?
+  
+  creadoEn            DateTime      @default(now()) @map("creado_en")
+  actualizadoEn       DateTime      @updatedAt @map("actualizado_en")
+  
+  @@index([proveedorId])
+  @@index([fechaRecepcion])
+  @@index([codigo])
+  @@map("recepciones")
+}
+
+// ==========================================
+// TABLA: expediciones
+// ==========================================
+
+model Expedicion {
+  id                  String            @id @default(uuid())
+  codigo              String            @unique
+  // Ejemplo: EXP-260625-001
+  
+  clienteId           String            @map("cliente_id")
+  cliente             Cliente           @relation(fields: [clienteId], references: [id])
+  
+  estado              EstadoExpedicion  @default(PREPARANDO)
+  
+  // Transporte
+  empresaTransporte   String?           @map("empresa_transporte")
+  matriculaVehiculo   String?           @map("matricula_vehiculo")
+  nombreConductor     String?           @map("nombre_conductor")
+  
+  // Fechas
+  fechaPreparacion    DateTime?         @map("fecha_preparacion")
+  fechaEnvio          DateTime?         @map("fecha_envio")
+  fechaEntrega        DateTime?         @map("fecha_entrega")
+  fechaPrevistaEntrega DateTime?        @map("fecha_prevista_entrega")
+  
+  // Items
+  items               ItemExpedicion[]
+  
+  // Documentos
+  documentos          Documento[]
+  
+  // Responsable
+  preparadoPor        String            @map("preparado_por")
+  preparador          Usuario           @relation("ExpedicionCreador", fields: [preparadoPor], references: [id])
+  
+  observaciones       String?
+  
+  creadoEn            DateTime          @default(now()) @map("creado_en")
+  actualizadoEn       DateTime          @updatedAt @map("actualizado_en")
+  
+  @@index([clienteId])
+  @@index([estado])
+  @@index([fechaEnvio])
+  @@index([codigo])
+  @@map("expediciones")
+}
+
+// ==========================================
+// TABLA: items_expedicion
+// ==========================================
+
+model ItemExpedicion {
+  id              String      @id @default(uuid())
+  expedicionId    String      @map("expedicion_id")
+  expedicion      Expedicion  @relation(fields: [expedicionId], references: [id], onDelete: Cascade)
+  
+  loteId          String      @map("lote_id")
+  lote            Lote        @relation(fields: [loteId], references: [id])
+  
+  cantidad        Float
+  unidadMedida    String      @map("unidad_medida")
+  
+  precioUnitario  Float?      @map("precio_unitario")
+  precioTotal     Float?      @map("precio_total")
+  
+  verificado      Boolean     @default(false)
+  
+  creadoEn        DateTime    @default(now()) @map("creado_en")
+  
+  @@index([expedicionId])
+  @@index([loteId])
+  @@map("items_expedicion")
+}
+
+// ==========================================
+// TABLA: alertas
+// ==========================================
+
+model Alerta {
+  id                  String          @id @default(uuid())
+  codigo              String          @unique
+  // Ejemplo: ALT-260625-001
+  
+  loteId              String          @map("lote_id")
+  lote                Lote            @relation(fields: [loteId], references: [id])
+  
+  tipo                TipoAlerta
+  severidad           SeveridadAlerta @default(AVISO)
+  estado              EstadoAlerta    @default(ABIERTA)
+  
+  titulo              String
+  descripcion         String
+  resolucion          String?
+  
+  // Impacto calculado automáticamente
+  lotesAfectados      String[]        @map("lotes_afectados")
+  clientesAfectados   String[]        @map("clientes_afectados")
+  cantidadRetirada    Float?          @map("cantidad_retirada")
+  cantidadRecuperada  Float?          @map("cantidad_recuperada")
+  porcentajeRecuperacion Float?       @map("porcentaje_recuperacion")
+  
+  // Responsables
+  creadaPor           String          @map("creada_por")
+  creador             Usuario         @relation("AlertaCreador", fields: [creadaPor], references: [id])
+  resueltaPor         String?         @map("resuelta_por")
+  
+  // Fechas
+  fechaCreacion       DateTime        @default(now()) @map("fecha_creacion")
+  fechaResolucion     DateTime?       @map("fecha_resolucion")
+  fechaCierre         DateTime?       @map("fecha_cierre")
+  
+  // Notificaciones enviadas
+  notificaciones      Notificacion[]
+  
+  // Documentos adjuntos
+  documentos          Documento[]
+  
+  creadoEn            DateTime        @default(now()) @map("creado_en")
+  actualizadoEn       DateTime        @updatedAt @map("actualizado_en")
+  
+  @@index([loteId])
+  @@index([estado])
+  @@index([severidad])
+  @@index([fechaCreacion])
+  @@index([codigo])
+  @@map("alertas")
+}
+
+// ==========================================
+// TABLA: notificaciones
+// ==========================================
+
+model Notificacion {
+  id              String      @id @default(uuid())
+  alertaId        String?     @map("alerta_id")
+  alerta          Alerta?     @relation(fields: [alertaId], references: [id], onDelete: Cascade)
+  
+  tipo            String      // CORREO, SMS, SISTEMA
+  destinatario    String
+  asunto          String
+  mensaje         String
+  
+  enviada         Boolean     @default(false)
+  fechaEnvio      DateTime?   @map("fecha_envio")
+  error           String?
+  
+  creadoEn        DateTime    @default(now()) @map("creado_en")
+  
+  @@index([alertaId])
+  @@map("notificaciones")
+}
+
+// ==========================================
+// TABLA: documentos
+// ==========================================
+
+model Documento {
+  id              String        @id @default(uuid())
+  nombre          String
+  tipo            TipoDocumento
+  url             String
+  tamaño          Int           @map("tamano")
+  extension       String
+  
+  // Entidad relacionada (polimórfica)
+  entidadTipo     String        @map("entidad_tipo")
+  // RECEPCION, PRODUCCION, EXPEDICION, ALERTA, MATERIA_PRIMA, LOTE
+  entidadId       String        @map("entidad_id")
+  
+  // Relaciones específicas
+  recepcionId     String?       @map("recepcion_id")
+  recepcion       Recepcion?    @relation(fields: [recepcionId], references: [id])
+  produccionId    String?       @map("produccion_id")
+  produccion      Produccion?   @relation(fields: [produccionId], references: [id])
+  expedicionId    String?       @map("expedicion_id")
+  expedicion      Expedicion?   @relation(fields: [expedicionId], references: [id])
+  alertaId        String?       @map("alerta_id")
+  alerta          Alerta?       @relation(fields: [alertaId], references: [id])
+  materiaPrimaId  String?       @map("materia_prima_id")
+  materiaPrima    MateriaPrima? @relation(fields: [materiaPrimaId], references: [id])
+  
+  subidoPor       String        @map("subido_por")
+  creadoEn        DateTime      @default(now()) @map("creado_en")
+  
+  @@index([entidadTipo, entidadId])
+  @@map("documentos")
+}
+
+// ==========================================
+// TABLA: simulacros_auditoria
+// ==========================================
+
+model SimulacroAuditoria {
+  id                          String    @id @default(uuid())
+  
+  loteId                      String    @map("lote_id")
+  lote                        Lote      @relation(fields: [loteId], references: [id])
+  
+  // Tiempos medidos en segundos
+  tiempoIdentificarClientes   Float?    @map("tiempo_identificar_clientes")
+  tiempoLocalizarStock        Float?    @map("tiempo_localizar_stock")
+  tiempoGenerarReporte        Float?    @map("tiempo_generar_reporte")
+  tiempoTotal                 Float?    @map("tiempo_total")
+  
+  // Resultados
+  tasaRecuperacion            Float?    @map("tasa_recuperacion")
+  clientesEncontrados         Int?      @map("clientes_encontrados")
+  stockLocalizado             Float?    @map("stock_localizado")
+  
+  aprobado                    Boolean?  // true si todos los tiempos < 1 hora
+  objetivoTiempo              Float     @default(3600) @map("objetivo_tiempo") // 1 hora en segundos
+  objetivoRecuperacion        Float     @default(95) @map("objetivo_recuperacion") // 95%
+  
+  realizadoPor                String    @map("realizado_por")
+  usuario                     Usuario   @relation("SimulacroUsuario", fields: [realizadoPor], references: [id])
+  
+  observaciones               String?
+  
+  creadoEn                    DateTime  @default(now()) @map("creado_en")
+  
+  @@index([loteId])
+  @@index([creadoEn])
+  @@map("simulacros_auditoria")
+}
+
+// ==========================================
+// TABLA: reportes_programados
+// ==========================================
+
+model ReporteProgramado {
+  id                  String            @id @default(uuid())
+  nombre              String
+  tipo                String
+  // STOCK, CADUCIDADES, TRAZABILIDAD, AUDITORIA, CRISIS, MOVIMIENTOS
+  
+  frecuencia          FrecuenciaReporte @default(DIARIO)
+  
+  parametros          Json
+  // Filtros y configuración específica del reporte
+  
+  destinatarios       String[]
+  // Lista de emails
+  
+  ultimoEnvio         DateTime?         @map("ultimo_envio")
+  proximoEnvio        DateTime          @map("proximo_envio")
+  
+  activo              Boolean           @default(true)
+  
+  creadoPor           String            @map("creado_por")
+  creadoEn            DateTime          @default(now()) @map("creado_en")
+  actualizadoEn       DateTime          @updatedAt @map("actualizado_en")
+  
+  @@map("reportes_programados")
+}
+
+// ==========================================
+// TABLA: configuracion_sistema
+// ==========================================
+
+model ConfiguracionSistema {
+  id              String    @id @default(uuid())
+  clave           String    @unique
+  valor           Json
+  descripcion     String?
+  
+  creadoEn        DateTime  @default(now()) @map("creado_en")
+  actualizadoEn   DateTime  @updatedAt @map("actualizado_en")
+  
+  @@map("configuracion_sistema")
+}
