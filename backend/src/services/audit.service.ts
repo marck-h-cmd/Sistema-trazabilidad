@@ -1,204 +1,160 @@
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
 import { prisma } from '@config/database';
-import { jwtConfig } from '@config/jwt';
-import { ApiError } from '@utils/errors';
-import { TokenPayload, LoginResponse, AuthUser } from '@types/auth.types';
-import { LoginDTO, RegisterDTO } from '@utils/validators';
-import { sanitizeUser } from '@utils/helpers';
-import { v4 as uuidv4 } from 'uuid';
+import { getPaginationParams, getPaginationMeta } from '@utils/pagination';
+import { appEvents, EVENT_TYPES } from '@events/eventEmitter';
 
-export class AuthService {
-  async login(data: LoginDTO, ipAddress?: string, userAgent?: string): Promise<LoginResponse> {
-    const user = await prisma.usuario.findUnique({
-      where: { email: data.email },
-    });
-
-    if (!user) {
-      throw ApiError.unauthorized('Credenciales inválidas');
-    }
-
-    if (user.estado === 'INACTIVO' || user.estado === 'BLOQUEADO') {
-      throw ApiError.forbidden('Usuario inactivo o bloqueado');
-    }
-
-    const isPasswordValid = await bcrypt.compare(data.password, user.contrasena);
-
-    if (!isPasswordValid) {
-      throw ApiError.unauthorized('Credenciales inválidas');
-    }
-
-    const tokenPayload: TokenPayload = {
-      id: user.id,
-      email: user.email,
-      rol: user.rol,
-      nombre: user.nombre,
-      apellido: user.apellido,
-    };
-
-    const accessToken = this.generateAccessToken(tokenPayload);
-    const refreshToken = this.generateRefreshToken(tokenPayload);
-
-    await prisma.sesion.create({
+export class AuditService {
+  async logAction(data: {
+    usuarioId: string;
+    accion: string;
+    entidad: string;
+    entidadId?: string;
+    valorAnterior?: any;
+    valorNuevo?: any;
+    ipAddress?: string;
+    userAgent?: string;
+  }) {
+    const log = await prisma.registroAuditoria.create({
       data: {
-        usuarioId: user.id,
-        token: accessToken,
-        tokenRefresco: refreshToken,
-        direccionIp: ipAddress,
-        agenteUsuario: userAgent,
-        expiraEn: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        usuarioId: data.usuarioId,
+        accion: data.accion,
+        entidad: data.entidad,
+        entidadId: data.entidadId,
+        valorAnterior: data.valorAnterior,
+        valorNuevo: data.valorNuevo,
+        direccionIp: data.ipAddress,
+        agenteUsuario: data.userAgent,
       },
     });
 
-    await prisma.usuario.update({
-      where: { id: user.id },
-      data: { ultimoInicioSesion: new Date() },
+    appEvents.emitEvent(EVENT_TYPES.AUDIT_ACTION, {
+      logId: log.id,
+      usuarioId: data.usuarioId,
+      accion: data.accion,
+      entidad: data.entidad,
+      entidadId: data.entidadId,
     });
 
-    await prisma.registroAuditoria.create({
-      data: {
-        usuarioId: user.id,
-        accion: 'INICIAR_SESION',
-        entidad: 'Usuario',
-        entidadId: user.id,
-        direccionIp: ipAddress,
-        agenteUsuario: userAgent,
-      },
+    return log;
+  }
+
+  async getLogs(query: {
+    page?: number;
+    limit?: number;
+    usuarioId?: string;
+    accion?: string;
+    entidad?: string;
+    fechaDesde?: string;
+    fechaHasta?: string;
+  }) {
+    const { skip, take, page, limit } = getPaginationParams({
+      page: query.page,
+      limit: query.limit,
     });
+
+    const where: any = {};
+
+    if (query.usuarioId) where.usuarioId = query.usuarioId;
+    if (query.accion) where.accion = query.accion;
+    if (query.entidad) where.entidad = query.entidad;
+    if (query.fechaDesde || query.fechaHasta) {
+      where.creadoEn = {};
+      if (query.fechaDesde) where.creadoEn.gte = new Date(query.fechaDesde);
+      if (query.fechaHasta) where.creadoEn.lte = new Date(query.fechaHasta);
+    }
+
+    const [logs, total] = await Promise.all([
+      prisma.registroAuditoria.findMany({
+        where,
+        skip,
+        take,
+        orderBy: { creadoEn: 'desc' },
+        include: {
+          usuario: { select: { email: true, nombre: true, apellido: true } },
+        },
+      }),
+      prisma.registroAuditoria.count({ where }),
+    ]);
 
     return {
-      accessToken,
-      refreshToken,
-      user: sanitizeUser(user) as AuthUser,
+      data: logs,
+      pagination: getPaginationMeta(total, page, limit),
     };
   }
 
-  async register(data: RegisterDTO): Promise<AuthUser> {
-    const existingUser = await prisma.usuario.findUnique({
-      where: { email: data.email },
-    });
-
-    if (existingUser) {
-      throw ApiError.conflict('El email ya está registrado');
-    }
-
-    const hashedPassword = await bcrypt.hash(data.password, 12);
-
-    const user = await prisma.usuario.create({
+  async createSimulation(loteId: string, userId: string) {
+    const simulation = await prisma.simulacroAuditoria.create({
       data: {
-        email: data.email,
-        contrasena: hashedPassword,
-        nombre: data.nombre,
-        apellido: data.apellido,
-        rol: (data.rol as any) || 'RECEPCION',
-        forzarCambioContrasena: true,
+        loteId,
+        realizadoPor: userId,
       },
     });
 
-    return sanitizeUser(user) as AuthUser;
-  }
-
-  async refreshToken(refreshToken: string, ipAddress?: string, userAgent?: string) {
-    try {
-      const decoded = jwt.verify(refreshToken, jwtConfig.refreshSecret) as TokenPayload;
-
-      const session = await prisma.sesion.findFirst({
-        where: {
-          tokenRefresco: refreshToken,
-          usuarioId: decoded.id,
-        },
-      });
-
-      if (!session) {
-        throw ApiError.unauthorized('Token de refresco inválido');
-      }
-
-      await prisma.sesion.delete({ where: { id: session.id } });
-
-      const tokenPayload: TokenPayload = {
-        id: decoded.id,
-        email: decoded.email,
-        rol: decoded.rol,
-        nombre: decoded.nombre,
-        apellido: decoded.apellido,
-      };
-
-      const newAccessToken = this.generateAccessToken(tokenPayload);
-      const newRefreshToken = this.generateRefreshToken(tokenPayload);
-
-      await prisma.sesion.create({
-        data: {
-          usuarioId: decoded.id,
-          token: newAccessToken,
-          tokenRefresco: newRefreshToken,
-          direccionIp: ipAddress,
-          agenteUsuario: userAgent,
-          expiraEn: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-        },
-      });
-
-      return {
-        accessToken: newAccessToken,
-        refreshToken: newRefreshToken,
-      };
-    } catch (error) {
-      if (error instanceof ApiError) throw error;
-      throw ApiError.unauthorized('Token de refresco inválido o expirado');
-    }
-  }
-
-  async logout(userId: string, token: string): Promise<void> {
-    await prisma.sesion.deleteMany({
-      where: {
-        usuarioId: userId,
-        token: token,
-      },
+    appEvents.emitEvent(EVENT_TYPES.SIMULATION_STARTED, {
+      simulationId: simulation.id,
+      loteId,
+      realizadoPor: userId,
     });
+
+    return simulation;
   }
 
-  async changePassword(userId: string, currentPassword: string, newPassword: string): Promise<void> {
-    const user = await prisma.usuario.findUnique({ where: { id: userId } });
+  async completeSimulation(simulationId: string, results: {
+    tiempoIdentificarClientes: number;
+    tiempoLocalizarStock: number;
+    tiempoGenerarReporte: number;
+    clientesEncontrados: number;
+    stockLocalizado: number;
+  }) {
+    const tiempoTotal = results.tiempoIdentificarClientes + results.tiempoLocalizarStock + results.tiempoGenerarReporte;
+    const tasaRecuperacion = results.stockLocalizado > 0 ? 95 : 0;
+    const aprobado = tiempoTotal <= 3600 && tasaRecuperacion >= 95;
 
-    if (!user) {
-      throw ApiError.notFound('Usuario no encontrado');
-    }
-
-    const isValid = await bcrypt.compare(currentPassword, user.contrasena);
-
-    if (!isValid) {
-      throw ApiError.badRequest('La contraseña actual es incorrecta');
-    }
-
-    const hashedPassword = await bcrypt.hash(newPassword, 12);
-
-    await prisma.usuario.update({
-      where: { id: userId },
+    const simulation = await prisma.simulacroAuditoria.update({
+      where: { id: simulationId },
       data: {
-        contrasena: hashedPassword,
-        forzarCambioContrasena: false,
+        tiempoIdentificarClientes: results.tiempoIdentificarClientes,
+        tiempoLocalizarStock: results.tiempoLocalizarStock,
+        tiempoGenerarReporte: results.tiempoGenerarReporte,
+        tiempoTotal,
+        clientesEncontrados: results.clientesEncontrados,
+        stockLocalizado: results.stockLocalizado,
+        tasaRecuperacion,
+        aprobado,
       },
     });
+
+    appEvents.emitEvent(EVENT_TYPES.SIMULATION_COMPLETED, {
+      simulationId,
+      aprobado,
+      tiempoTotal,
+      tasaRecuperacion,
+    });
+
+    return simulation;
   }
 
-  async getProfile(userId: string): Promise<AuthUser> {
-    const user = await prisma.usuario.findUnique({ where: { id: userId } });
+  async getSimulations(query: { page?: number; limit?: number }) {
+    const { skip, take, page, limit } = getPaginationParams({
+      page: query.page,
+      limit: query.limit,
+    });
 
-    if (!user) {
-      throw ApiError.notFound('Usuario no encontrado');
-    }
+    const [simulations, total] = await Promise.all([
+      prisma.simulacroAuditoria.findMany({
+        skip,
+        take,
+        orderBy: { creadoEn: 'desc' },
+        include: {
+          lote: { select: { codigo: true } },
+          usuario: { select: { nombre: true, apellido: true } },
+        },
+      }),
+      prisma.simulacroAuditoria.count(),
+    ]);
 
-    return sanitizeUser(user) as AuthUser;
-  }
-
-  private generateAccessToken(payload: TokenPayload): string {
-    return jwt.sign(payload, jwtConfig.secret, {
-      expiresIn: jwtConfig.expiresIn,
-    } as jwt.SignOptions);
-  }
-
-  private generateRefreshToken(payload: TokenPayload): string {
-    return jwt.sign(payload, jwtConfig.refreshSecret, {
-      expiresIn: jwtConfig.refreshExpiresIn,
-    } as jwt.SignOptions);
+    return {
+      data: simulations,
+      pagination: getPaginationMeta(total, page, limit),
+    };
   }
 }
