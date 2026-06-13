@@ -70,7 +70,7 @@ enum EstadoExpedicion {
 
 enum TipoAlerta {
   CONTAMINACION
-  CUERPO_EXTRAÑO
+  CUERPO_EXTRANO
   ETIQUETADO
   CALIDAD
   INCUMPLIMIENTO_ESPECIFICACIONES
@@ -139,6 +139,7 @@ model Usuario {
   registrosAuditoria      RegistroAuditoria[]  @relation("UsuarioAuditoria")
   sesiones                Sesion[]
   recepciones             Recepcion[]
+  producciones            Produccion[]
   lotesCreados            Lote[]               @relation("LoteCreador")
   movimientosRealizados   MovimientoLote[]     @relation("MovimientoUsuario")
   expedicionesCreadas     Expedicion[]         @relation("ExpedicionCreador")
@@ -217,7 +218,6 @@ model Producto {
   
   // Relaciones
   lotes                       Lote[]
-  materiasPrimas              MateriaPrima[]
   lineasProduccionProductos   LineaProduccionProducto[]
   plantillasEtiquetas         PlantillaEtiqueta[]
   
@@ -248,6 +248,7 @@ model Proveedor {
   // Relaciones
   usuario           Usuario?
   materiasPrimas    MateriaPrima[]
+  recepciones       Recepcion[]
   
   activo            Boolean     @default(true)
   creadoEn          DateTime    @default(now()) @map("creado_en")
@@ -457,6 +458,9 @@ model Lote {
   movimientos         MovimientoLote[]
   itemsExpedicion     ItemExpedicion[]
   alertas             Alerta[]
+  recepcionId         String?         @map("recepcion_id")
+  recepcion           Recepcion?      @relation(fields: [recepcionId], references: [id])
+  simulacros          SimulacroAuditoria[]
   
   // Información adicional
   numeroLoteProveedor String?         @map("numero_lote_proveedor")
@@ -476,6 +480,7 @@ model Lote {
   @@index([fechaCaducidad])
   @@index([ubicacionId])
   @@index([lotePadreId])
+  @@index([recepcionId])
   @@index([creadoEn])
   @@map("lotes")
   
@@ -540,7 +545,7 @@ model Produccion {
   id                  String          @id @default(uuid())
   
   // Lote de producto terminado generado
-  loteId              String          @map("lote_id")
+  loteId              String          @unique @map("lote_id")
   lote                Lote            @relation(fields: [loteId], references: [id], onDelete: Cascade)
   
   // Línea de producción utilizada
@@ -830,7 +835,7 @@ model Documento {
   nombre          String
   tipo            TipoDocumento
   url             String
-  tamaño          Int           @map("tamano")
+  tamano          Int           @map("tamano")
   extension       String
   
   // Entidad relacionada (polimórfica)
