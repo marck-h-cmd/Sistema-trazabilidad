@@ -7,7 +7,7 @@ export interface PaginationResult {
   limit: number;
 }
 
-export function getPaginationParams(query: PaginationDTO): PaginationResult {
+export function getPaginationParams(query: Partial<PaginationDTO>): PaginationResult {
   const page = query.page || 1;
   const limit = query.limit || 10;
   const skip = (page - 1) * limit;

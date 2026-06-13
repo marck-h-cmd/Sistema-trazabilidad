@@ -22,8 +22,12 @@
       "@routes/*": ["routes/*"],
       "@middleware/*": ["middleware/*"],
       "@utils/*": ["utils/*"],
-      "@types/*": ["types/*"],
-      "@repositories/*": ["repositories/*"]
+      "@customTypes/*": ["types/*"],
+      "@repositories/*": ["repositories/*"],
+      "@queues/*": ["queues/*"],
+      "@events/*": ["events/*"],
+      "@jobs/*": ["jobs/*"],
+      "@websocket/*": ["websocket/*"]
     },
     "typeRoots": ["./node_modules/@types", "./src/types"]
   },

@@ -65,10 +65,10 @@ export function registerSocketHandlers(socket: Socket, io: Server): void {
     socket.emit('pong', { timestamp: new Date().toISOString() });
   });
 
-  registerEventListeners(socket, user);
+    registerEventListeners(socket, io, user);
 }
 
-function registerEventListeners(socket: Socket, user: any): void {
+function registerEventListeners(socket: Socket, io: Server, user: any): void {
   const handleLotEvent = (event: string, data: any) => {
     if (data.loteId) {
       io.to(`lot:${data.loteId}`).emit(event, data);
@@ -95,32 +95,30 @@ function registerEventListeners(socket: Socket, user: any): void {
     io.to('room:dashboard').emit(event, data);
   };
 
-  appEvents.on(EVENT_TYPES.LOT_CREATED, (data) => handleLotEvent('lot:created', data));
-  appEvents.on(EVENT_TYPES.LOT_STATUS_CHANGED, (data) => handleLotEvent('lot:status-changed', data));
-  appEvents.on(EVENT_TYPES.LOT_EXPIRED, (data) => handleLotEvent('lot:expired', data));
-  appEvents.on(EVENT_TYPES.LOT_BLOCKED, (data) => handleLotEvent('lot:blocked', data));
-  appEvents.on(EVENT_TYPES.LOT_MOVED, (data) => handleLotEvent('lot:moved', data));
-  appEvents.on(EVENT_TYPES.LOT_CONSUMED, (data) => handleLotEvent('lot:consumed', data));
+  appEvents.on(EVENT_TYPES.LOT_CREATED, (data: any) => handleLotEvent('lot:created', data));
+  appEvents.on(EVENT_TYPES.LOT_STATUS_CHANGED, (data: any) => handleLotEvent('lot:status-changed', data));
+  appEvents.on(EVENT_TYPES.LOT_EXPIRED, (data: any) => handleLotEvent('lot:expired', data));
+  appEvents.on(EVENT_TYPES.LOT_BLOCKED, (data: any) => handleLotEvent('lot:blocked', data));
+  appEvents.on(EVENT_TYPES.LOT_MOVED, (data: any) => handleLotEvent('lot:moved', data));
+  appEvents.on(EVENT_TYPES.LOT_CONSUMED, (data: any) => handleLotEvent('lot:consumed', data));
 
-  appEvents.on(EVENT_TYPES.ALERT_CREATED, (data) => handleAlertEvent('alert:created', data));
-  appEvents.on(EVENT_TYPES.ALERT_ACTIVATED, (data) => handleAlertEvent('alert:activated', data));
-  appEvents.on(EVENT_TYPES.ALERT_RESOLVED, (data) => handleAlertEvent('alert:resolved', data));
-  appEvents.on(EVENT_TYPES.CRISIS_DECLARED, (data) => handleAlertEvent('crisis:declared', data));
+  appEvents.on(EVENT_TYPES.ALERT_CREATED, (data: any) => handleAlertEvent('alert:created', data));
+  appEvents.on(EVENT_TYPES.ALERT_ACTIVATED, (data: any) => handleAlertEvent('alert:activated', data));
+  appEvents.on(EVENT_TYPES.ALERT_RESOLVED, (data: any) => handleAlertEvent('alert:resolved', data));
+  appEvents.on(EVENT_TYPES.CRISIS_DECLARED, (data: any) => handleAlertEvent('crisis:declared', data));
 
-  appEvents.on(EVENT_TYPES.INVENTORY_MOVEMENT, (data) => handleInventoryEvent('inventory:movement', data));
-  appEvents.on(EVENT_TYPES.STOCK_LOW, (data) => handleInventoryEvent('stock:low', data));
-  appEvents.on(EVENT_TYPES.STOCK_OUT, (data) => handleInventoryEvent('stock:out', data));
+  appEvents.on(EVENT_TYPES.INVENTORY_MOVEMENT, (data: any) => handleInventoryEvent('inventory:movement', data));
+  appEvents.on(EVENT_TYPES.STOCK_LOW, (data: any) => handleInventoryEvent('stock:low', data));
+  appEvents.on(EVENT_TYPES.STOCK_OUT, (data: any) => handleInventoryEvent('stock:out', data));
 
-  appEvents.on(EVENT_TYPES.SHIPMENT_CREATED, (data) => handleDashboardEvent('shipment:created', data));
-  appEvents.on(EVENT_TYPES.SHIPMENT_DISPATCHED, (data) => handleDashboardEvent('shipment:dispatched', data));
-  appEvents.on(EVENT_TYPES.SHIPMENT_DELIVERED, (data) => handleDashboardEvent('shipment:delivered', data));
+  appEvents.on(EVENT_TYPES.SHIPMENT_CREATED, (data: any) => handleDashboardEvent('shipment:created', data));
+  appEvents.on(EVENT_TYPES.SHIPMENT_DISPATCHED, (data: any) => handleDashboardEvent('shipment:dispatched', data));
+  appEvents.on(EVENT_TYPES.SHIPMENT_DELIVERED, (data: any) => handleDashboardEvent('shipment:delivered', data));
 
-  appEvents.on(EVENT_TYPES.PRODUCTION_COMPLETED, (data) => handleDashboardEvent('production:completed', data));
-  appEvents.on(EVENT_TYPES.RECEPTION_COMPLETED, (data) => handleDashboardEvent('reception:completed', data));
+  appEvents.on(EVENT_TYPES.PRODUCTION_COMPLETED, (data: any) => handleDashboardEvent('production:completed', data));
+  appEvents.on(EVENT_TYPES.RECEPTION_COMPLETED, (data: any) => handleDashboardEvent('reception:completed', data));
 
   socket.on('disconnect', () => {
     appEvents.removeAllListeners();
   });
 }
-
-import { io } from './socketServer';

@@ -32,6 +32,7 @@ export interface LotDTO {
 }
 
 export interface CreateLotDTO {
+  codigo?: string;
   productoId: string;
   cantidad: number;
   unidadMedida: string;

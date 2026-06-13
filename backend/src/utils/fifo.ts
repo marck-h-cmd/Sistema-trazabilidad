@@ -2,7 +2,7 @@ import { prisma } from '@config/database';
 import { EstadoLote } from '@prisma/client';
 import { ApiError } from './errors';
 
-interface FifoItem {
+export interface FifoItem {
   loteId: string;
   codigo: string;
   cantidadDisponible: number;
@@ -10,7 +10,7 @@ interface FifoItem {
   ubicacion: string;
 }
 
-interface FifoSuggestion {
+export interface FifoSuggestion {
   lotes: FifoItem[];
   cantidadTotal: number;
   message: string;

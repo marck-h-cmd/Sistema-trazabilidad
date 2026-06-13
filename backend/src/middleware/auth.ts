@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { jwtConfig } from '@config/jwt';
 import { ApiError } from '@utils/errors';
-import { TokenPayload } from '@types/auth.types';
+import { TokenPayload } from '@customTypes/auth.types';
 
 export const authenticate = (req: Request, _res: Response, next: NextFunction) => {
   const authHeader = req.headers.authorization;

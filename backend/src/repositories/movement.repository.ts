@@ -38,7 +38,7 @@ export class MovementRepository {
     return { movements, total };
   }
 
-  async findByLotId(lotId: string) {
+  async findByLotId(loteId: string) {
     return prisma.movimientoLote.findMany({
       where: { loteId },
       orderBy: { creadoEn: 'asc' },
