@@ -5,7 +5,7 @@ import { generateAlertCode } from '@utils/lotGenerator';
 import { appEvents, EVENT_TYPES } from '@events/eventEmitter';
 import { prisma } from '@config/database';
 import { getPaginationParams, getPaginationMeta } from '@utils/pagination';
-import { CreateAlertDTO, UpdateAlertDTO, AlertImpactDTO, AlertQueryParams } from '@types/alert.types';
+import { CreateAlertDTO, UpdateAlertDTO, AlertImpactDTO, AlertQueryParams } from '@customTypes/alert.types';
 import { sendBulkNotifications } from '@queues/notification.queue';
 import { addEmailToQueue } from '@queues/email.queue';
 
@@ -220,8 +220,8 @@ export class AlertService {
     const impact = await this.analyzeImpact(alertId);
 
     const lotesABloquear = impact.lotesAfectados
-      .filter((l) => l.ubicacion)
-      .map((l) => l.id);
+      .filter((l: any) => l.ubicacion)
+      .map((l: any) => l.id);
 
     if (lotesABloquear.length > 0) {
       await this.lotService.blockLots(lotesABloquear, userId);

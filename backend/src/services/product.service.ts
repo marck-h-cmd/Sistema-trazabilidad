@@ -1,6 +1,6 @@
 import { ProductRepository } from '@repositories/product.repository';
 import { ApiError } from '@utils/errors';
-import { CreateProductDTO, UpdateProductDTO, ProductQueryParams } from '@types/product.types';
+import { CreateProductDTO, UpdateProductDTO, ProductQueryParams } from '@customTypes/product.types';
 import { getPaginationParams, getPaginationMeta } from '@utils/pagination';
 import { Prisma, CategoriaProducto } from '@prisma/client';
 

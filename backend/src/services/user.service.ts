@@ -1,6 +1,6 @@
 import { UserRepository } from '@repositories/user.repository';
 import { ApiError } from '@utils/errors';
-import { CreateUserDTO, UpdateUserDTO, UserQueryParams } from '@types/user.types';
+import { CreateUserDTO, UpdateUserDTO, UserQueryParams } from '@customTypes/user.types';
 import { getPaginationParams, getPaginationMeta } from '@utils/pagination';
 import { sanitizeUser } from '@utils/helpers';
 import { Prisma, RolUsuario, EstadoUsuario } from '@prisma/client';

@@ -220,10 +220,7 @@ export class ProductionService {
   }, userId: string) {
     await this.findById(id);
 
-    return this.productionRepository.update(id, {
-      ...data,
-      actualizadoPor: userId,
-    });
+    return this.productionRepository.update(id, data);
   }
 
   async getRecentProductions(limit: number = 5) {

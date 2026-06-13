@@ -12,7 +12,7 @@ export async function generateBarcode(
   }
 ): Promise<{ image: Buffer; format: string; code: string }> {
   try {
-    const buffer = await bwipjs.toBuffer({
+    const buffer = await (bwipjs.toBuffer({
       bcid: options?.type || barcodeConfig.type,
       text: code,
       scale: options?.scale || barcodeConfig.scale,
@@ -21,7 +21,7 @@ export async function generateBarcode(
       textxalign: 'center',
       backgroundcolor: barcodeConfig.background,
       color: barcodeConfig.color,
-    });
+    } as any) as Promise<Buffer>);
 
     return {
       image: buffer,

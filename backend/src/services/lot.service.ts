@@ -1,6 +1,6 @@
 import { LotRepository } from '@repositories/lot.repository';
 import { ApiError } from '@utils/errors';
-import { CreateLotDTO, UpdateLotDTO, LotQueryParams } from '@types/lot.types';
+import { CreateLotDTO, UpdateLotDTO, LotQueryParams } from '@customTypes/lot.types';
 import { getPaginationParams, getPaginationMeta } from '@utils/pagination';
 import { generateLotCode } from '@utils/lotGenerator';
 import { appEvents, EVENT_TYPES } from '@events/eventEmitter';

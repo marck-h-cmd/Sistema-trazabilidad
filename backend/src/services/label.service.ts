@@ -2,7 +2,7 @@ import { generateBarcode } from '@services/barcode.service';
 import { generateQRCode } from '@services/qrcode.service';
 import { prisma } from '@config/database';
 import { ApiError } from '@utils/errors';
-import { PrintLabelRequest, PrintLabelResponse, LabelData } from '@types/barcode.types';
+import { PrintLabelRequest, PrintLabelResponse, LabelData } from '@customTypes/barcode.types';
 import { formatDate } from '@utils/dateUtils';
 
 export class LabelService {
@@ -27,7 +27,7 @@ export class LabelService {
       weight: request.customData?.weight,
       ingredients: request.customData?.ingredients,
       alergenos: request.customData?.alergenos,
-      additionalInfo: request.customData?.additionalInfo,
+      additionalInfo: request.customData?.additionalInfo ? [request.customData.additionalInfo] : undefined,
     };
 
     if (labelType === 'CODE_128' || labelType === 'QR') {

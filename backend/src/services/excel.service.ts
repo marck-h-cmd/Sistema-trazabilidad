@@ -49,7 +49,7 @@ export class ExcelService {
       });
     }
 
-    return (await workbook.xlsx.writeBuffer()) as Buffer;
+    return (await workbook.xlsx.writeBuffer()) as unknown as Buffer;
   }
 
   async exportStockReport(data: any[]): Promise<Buffer> {

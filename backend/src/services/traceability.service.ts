@@ -1,6 +1,6 @@
 import { prisma } from '@config/database';
 import { ApiError } from '@utils/errors';
-import { FullTraceabilityDTO, BackwardTraceItem, ForwardTraceItem, TimelineItem, PublicTraceabilityDTO } from '@types/traceability.types';
+import { FullTraceabilityDTO, BackwardTraceItem, ForwardTraceItem, TimelineItem, PublicTraceabilityDTO } from '@customTypes/traceability.types';
 import { formatDate } from '@utils/dateUtils';
 
 export class TraceabilityService {
@@ -164,6 +164,8 @@ export class TraceabilityService {
         usuario: {
           select: { nombre: true, apellido: true },
         },
+        ubicacionOrigen: true,
+        ubicacionDestino: true,
       },
     });
 

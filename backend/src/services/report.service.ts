@@ -1,6 +1,6 @@
 import { prisma } from '@config/database';
 import { ApiError } from '@utils/errors';
-import { ReportConfig, StockReportDTO, ExpiryReportDTO, TraceabilityReportDTO, ShipmentReportDTO } from '@types/report.types';
+import { ReportConfig, StockReportDTO, ExpiryReportDTO, TraceabilityReportDTO, ShipmentReportDTO } from '@customTypes/report.types';
 import { TraceabilityService } from '@services/traceability.service';
 import { daysUntilExpiry } from '@utils/dateUtils';
 
