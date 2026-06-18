@@ -1,0 +1,44 @@
+{
+  "name": "trazabilidad-alimentaria",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Sistema de Trazabilidad de Productos Alimenticios y Lotes",
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "scripts": {
+    "dev": "turbo run dev",
+    "dev:frontend": "turbo run dev --filter=frontend",
+    "dev:backend": "turbo run dev --filter=backend",
+    "build": "turbo run build",
+    "build:frontend": "turbo run build --filter=frontend",
+    "build:backend": "turbo run build --filter=backend",
+    "start": "turbo run start",
+    "lint": "turbo run lint",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,css}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,css}\"",
+    "test": "turbo run test",
+    "test:backend": "turbo run test --filter=backend",
+    "test:frontend": "turbo run test --filter=frontend",
+    "db:migrate": "cd backend && npx prisma migrate dev",
+    "db:push": "cd backend && npx prisma db push",
+    "db:seed": "cd backend && npx prisma db seed",
+    "db:studio": "cd backend && npx prisma studio",
+    "db:generate": "cd backend && npx prisma generate",
+    "clean": "turbo run clean && rm -rf node_modules",
+    "docker:dev": "docker-compose -f docker-compose.dev.yml up --build",
+    "docker:prod": "docker-compose up --build -d",
+    "docker:down": "docker-compose down",
+    "setup": "npm install && npm run db:generate && npm run db:push && npm run db:seed"
+  },
+  "devDependencies": {
+    "turbo": "^1.13.0",
+    "prettier": "^3.2.4",
+    "prettier-plugin-tailwindcss": "^0.5.11"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  }
+}
