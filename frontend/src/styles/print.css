@@ -1,0 +1,25 @@
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block !important;
+  }
+
+  body {
+    font-size: 12pt;
+    color: #000 !important;
+    background: #fff !important;
+  }
+
+  .label-container {
+    width: 50mm;
+    height: 30mm;
+    page-break-after: avoid;
+  }
+
+  .barcode-print {
+    image-rendering: pixelated;
+  }
+}
