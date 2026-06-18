@@ -1,0 +1,23 @@
+name: Deploy Backend
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/deploy-backend.yml'
+
+jobs:
+  deploy:
+    name: Deploy Backend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -t trazabilidad-backend ./backend
+
+      - name: Deploy
+        run: |
+          echo "Desplegando backend..."
+          # Aquí comandos específicos del proveedor (Railway, Render, AWS, etc.)

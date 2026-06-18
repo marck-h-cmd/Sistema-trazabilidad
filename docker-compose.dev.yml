@@ -1,0 +1,124 @@
+version: '3.8'
+
+services:
+  # ==========================================
+  # BASE DE DATOS (DESARROLLO)
+  # ==========================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: trazabilidad-dev-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: trazabilidad
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+    networks:
+      - trazabilidad-dev-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # ==========================================
+  # REDIS (DESARROLLO)
+  # ==========================================
+  redis:
+    image: redis:7-alpine
+    container_name: trazabilidad-dev-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_dev_data:/data
+    networks:
+      - trazabilidad-dev-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # ==========================================
+  # BACKEND (DESARROLLO)
+  # ==========================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: trazabilidad-dev-backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: development
+      PORT: 3001
+      API_PREFIX: /api/v1
+      DATABASE_URL: "postgresql://postgres:password@postgres:5432/trazabilidad?schema=public"
+      REDIS_URL: "redis://redis:6379"
+      JWT_SECRET: "dev-jwt-secret-123"
+      JWT_REFRESH_SECRET: "dev-jwt-refresh-secret-123"
+      JWT_EXPIRATION: 15m
+      JWT_REFRESH_EXPIRATION: 7d
+      CORS_ORIGIN: "http://localhost:3000"
+      QR_BASE_URL: "http://localhost:3000/t"
+      LOG_LEVEL: debug
+      LOG_DIR: /app/logs
+      UPLOAD_DIR: /app/uploads
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./backend/src:/app/src
+      - ./backend/prisma:/app/prisma
+      - ./backend/uploads:/app/uploads
+      - ./backend/logs:/app/logs
+      - /app/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - trazabilidad-dev-network
+    command: npm run dev
+
+  # ==========================================
+  # FRONTEND (DESARROLLO)
+  # ==========================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: trazabilidad-dev-frontend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: development
+      NEXT_PUBLIC_API_URL: "http://localhost:3001/api/v1"
+      NEXT_PUBLIC_QR_BASE_URL: "http://localhost:3000/t"
+      NEXT_PUBLIC_APP_NAME: "Sistema de Trazabilidad Alimentaria"
+      NEXT_PUBLIC_APP_URL: "http://localhost:3000"
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      - backend
+    networks:
+      - trazabilidad-dev-network
+    command: npm run dev
+
+volumes:
+  postgres_dev_data:
+    name: trazabilidad-dev-postgres-data
+  redis_dev_data:
+    name: trazabilidad-dev-redis-data
+
+networks:
+  trazabilidad-dev-network:
+    name: trazabilidad-dev-network
+    driver: bridge

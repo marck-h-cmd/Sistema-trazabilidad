@@ -8,6 +8,7 @@ async function main() {
 
   // Limpiar datos existentes
   await prisma.notificacion.deleteMany();
+  await prisma.configuracionSistema.deleteMany();
   await prisma.alerta.deleteMany();
   await prisma.itemExpedicion.deleteMany();
   await prisma.expedicion.deleteMany();

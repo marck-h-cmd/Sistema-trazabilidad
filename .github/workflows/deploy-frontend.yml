@@ -1,0 +1,23 @@
+name: Deploy Frontend
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/deploy-frontend.yml'
+
+jobs:
+  deploy:
+    name: Deploy Frontend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -t trazabilidad-frontend ./frontend
+
+      - name: Deploy
+        run: |
+          echo "Desplegando frontend..."
+          # Aquí comandos específicos (Vercel, Netlify, AWS Amplify, etc.)
