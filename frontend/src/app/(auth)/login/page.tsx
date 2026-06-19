@@ -33,6 +33,7 @@ export default function LoginPage() {
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -41,6 +42,20 @@ export default function LoginPage() {
       password: '',
     },
   });
+
+  const demoUsers = [
+    { role: 'Administrador', email: 'admin@panaderia.com', colorClass: 'bg-red-500' },
+    { role: 'Calidad', email: 'calidad@panaderia.com', colorClass: 'bg-purple-500' },
+    { role: 'Recepción', email: 'recepcion@panaderia.com', colorClass: 'bg-blue-500' },
+    { role: 'Producción', email: 'produccion@panaderia.com', colorClass: 'bg-green-500' },
+    { role: 'Almacén', email: 'almacen@panaderia.com', colorClass: 'bg-yellow-500' },
+    { role: 'Despacho', email: 'despacho@panaderia.com', colorClass: 'bg-orange-500' },
+  ];
+
+  const handleFillCredentials = (email: string) => {
+    setValue('email', email, { shouldValidate: true });
+    setValue('password', 'password123', { shouldValidate: true });
+  };
 
   const onSubmit = async (data: LoginFormData) => {
     setIsLoading(true);
@@ -186,44 +201,35 @@ export default function LoginPage() {
       {/* Credenciales demo */}
       <Card className="mt-6 border border-dashed dark:border-gray-700 dark:bg-gray-900/50">
         <CardContent className="p-4">
-          <p className="mb-3 text-xs font-semibold text-muted-foreground dark:text-gray-500">
-            CREDENCIALES DE PRUEBA
-          </p>
-          <div className="grid grid-cols-2 gap-2 text-xs">
-            <div className="space-y-1">
-              <div className="flex items-center gap-1.5">
-                <div className="h-1.5 w-1.5 rounded-full bg-red-500" />
-                <span className="text-muted-foreground dark:text-gray-400">Admin:</span>
-                <span className="font-mono font-medium dark:text-gray-300">admin@panaderia.com</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div className="h-1.5 w-1.5 rounded-full bg-blue-500" />
-                <span className="text-muted-foreground dark:text-gray-400">Recepción:</span>
-                <span className="font-mono font-medium dark:text-gray-300">recepcion@panaderia.com</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div className="h-1.5 w-1.5 rounded-full bg-green-500" />
-                <span className="text-muted-foreground dark:text-gray-400">Producción:</span>
-                <span className="font-mono font-medium dark:text-gray-300">produccion@panaderia.com</span>
-              </div>
-            </div>
-            <div className="space-y-1">
-              <div className="flex items-center gap-1.5">
-                <div className="h-1.5 w-1.5 rounded-full bg-yellow-500" />
-                <span className="text-muted-foreground dark:text-gray-400">Almacén:</span>
-                <span className="font-mono font-medium dark:text-gray-300">almacen@panaderia.com</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div className="h-1.5 w-1.5 rounded-full bg-orange-500" />
-                <span className="text-muted-foreground dark:text-gray-400">Despacho:</span>
-                <span className="font-mono font-medium dark:text-gray-300">despacho@panaderia.com</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div className="h-1.5 w-1.5 rounded-full bg-purple-500" />
-                <span className="text-muted-foreground dark:text-gray-400">Contraseña:</span>
-                <span className="font-mono font-medium dark:text-gray-300">password123</span>
-              </div>
-            </div>
+          <div className="mb-3 flex items-center justify-between">
+            <p className="text-xs font-semibold text-muted-foreground dark:text-gray-400">
+              ACCESO RÁPIDO (HAGA CLICK PARA AUTOCOMPLETAR)
+            </p>
+            <span className="text-[10px] text-muted-foreground font-mono bg-muted dark:bg-gray-800 px-1.5 py-0.5 rounded">
+              Contraseña: password123
+            </span>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            {demoUsers.map((user) => (
+              <button
+                key={user.email}
+                type="button"
+                onClick={() => handleFillCredentials(user.email)}
+                className={cn(
+                  "flex flex-col items-start gap-1 p-2.5 rounded-lg border text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm cursor-pointer",
+                  "border-muted bg-card hover:border-primary/50 hover:bg-primary/[0.02]",
+                  "dark:border-gray-800 dark:bg-gray-950 dark:hover:border-primary/50 dark:hover:bg-primary/[0.02]"
+                )}
+              >
+                <div className="flex w-full items-center justify-between">
+                  <span className="text-xs font-medium dark:text-gray-200">{user.role}</span>
+                  <span className={cn("h-2 w-2 rounded-full", user.colorClass)} />
+                </div>
+                <span className="font-mono text-[10px] text-muted-foreground dark:text-gray-400">
+                  {user.email}
+                </span>
+              </button>
+            ))}
           </div>
         </CardContent>
       </Card>

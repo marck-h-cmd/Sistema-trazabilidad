@@ -19,6 +19,20 @@ export class ReportController {
       return res.send(buffer);
     }
 
+    if (req.query.formato === 'pdf') {
+      const buffer = await pdfService.exportStockReport(data);
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', 'attachment; filename=reporte-stock.pdf');
+      return res.send(buffer);
+    }
+
+    if (req.query.formato === 'csv') {
+      const csvData = await excelService.exportStockReportCSV(data);
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader('Content-Disposition', 'attachment; filename=reporte-stock.csv');
+      return res.send(csvData);
+    }
+
     res.json(formatApiResponse(data));
   });
 
@@ -30,6 +44,20 @@ export class ReportController {
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
       res.setHeader('Content-Disposition', 'attachment; filename=reporte-caducidades.xlsx');
       return res.send(buffer);
+    }
+
+    if (req.query.formato === 'pdf') {
+      const buffer = await pdfService.exportExpiryReport(data);
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', 'attachment; filename=reporte-caducidades.pdf');
+      return res.send(buffer);
+    }
+
+    if (req.query.formato === 'csv') {
+      const csvData = await excelService.exportExpiryReportCSV(data);
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader('Content-Disposition', 'attachment; filename=reporte-caducidades.csv');
+      return res.send(csvData);
     }
 
     res.json(formatApiResponse(data));
@@ -48,6 +76,20 @@ export class ReportController {
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
       res.setHeader('Content-Disposition', 'attachment; filename=reporte-expediciones.xlsx');
       return res.send(buffer);
+    }
+
+    if (req.query.formato === 'pdf') {
+      const buffer = await pdfService.exportShipmentReport(data);
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', 'attachment; filename=reporte-expediciones.pdf');
+      return res.send(buffer);
+    }
+
+    if (req.query.formato === 'csv') {
+      const csvData = await excelService.exportShipmentReportCSV(data);
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader('Content-Disposition', 'attachment; filename=reporte-expediciones.csv');
+      return res.send(csvData);
     }
 
     res.json(formatApiResponse(data));

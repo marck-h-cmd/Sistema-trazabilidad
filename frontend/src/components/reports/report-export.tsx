@@ -52,13 +52,15 @@ export function ReportExport({ reportType, filters }: ReportExportProps) {
       return { response, formato };
     },
     onSuccess: ({ response, formato }) => {
-      const blob = new Blob([response.data], {
-        type: formato === 'excel'
-          ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-          : formato === 'csv'
-          ? 'text/csv'
-          : 'application/pdf',
-      });
+      const blob = response.data instanceof Blob 
+        ? response.data 
+        : new Blob([response.data], {
+            type: formato === 'excel'
+              ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+              : formato === 'csv'
+              ? 'text/csv'
+              : 'application/pdf',
+          });
 
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -73,10 +75,26 @@ export function ReportExport({ reportType, filters }: ReportExportProps) {
         variant: 'success',
       });
     },
-    onError: (error: any) => {
+    onError: async (error: any) => {
+      let message = 'Error al generar el archivo';
+      
+      if (error.response?.data instanceof Blob) {
+        try {
+          const text = await error.response.data.text();
+          const json = JSON.parse(text);
+          message = json.error?.message || json.message || message;
+        } catch (_) {
+          // Keep generic error if parsing fails
+        }
+      } else if (error.response?.data?.error?.message) {
+        message = error.response.data.error.message;
+      } else if (error.message) {
+        message = error.message;
+      }
+
       toast({
         title: 'Error al exportar',
-        description: error.response?.data?.error?.message || 'Error al generar el archivo',
+        description: message,
         variant: 'destructive',
       });
     },

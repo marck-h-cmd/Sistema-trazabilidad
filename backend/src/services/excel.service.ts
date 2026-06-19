@@ -127,4 +127,85 @@ export class ExcelService {
       { name: 'Resumen', headers: resumenHeaders, data: resumenRows },
     ]);
   }
+
+  async exportStockReportCSV(data: any[]): Promise<string> {
+    const headers = ['Código Lote', 'Producto', 'SKU', 'Categoría', 'Cantidad', 'Unidad', 'Ubicación', 'Estado', 'Días Restantes', 'Fecha Caducidad'];
+    const rows = data.flatMap((producto) =>
+      producto.lotes.map((lote: any) => [
+        lote.codigo,
+        producto.producto,
+        producto.sku,
+        producto.categoria,
+        lote.cantidad,
+        lote.unidad,
+        lote.ubicacion,
+        lote.estado,
+        lote.diasRestantes,
+        lote.fechaCaducidad ? formatDate(lote.fechaCaducidad) : '',
+      ])
+    );
+    return this.convertToCSV(headers, rows);
+  }
+
+  async exportExpiryReportCSV(data: any): Promise<string> {
+    const headers = ['Código Lote', 'Producto', 'Cantidad', 'Fecha Caducidad', 'Días Restantes', 'Ubicación', 'Alerta'];
+    const rows = data.lotes.map((lote: any) => [
+      lote.codigo,
+      lote.producto,
+      lote.cantidad,
+      lote.fechaCaducidad ? formatDate(lote.fechaCaducidad) : '',
+      lote.diasRestantes,
+      lote.ubicacion,
+      lote.alerta === 'rojo' ? 'CRÍTICO' : lote.alerta === 'amarillo' ? 'ATENCIÓN' : 'OK',
+    ]);
+    const mainCsv = this.convertToCSV(headers, rows);
+
+    const resumenHeaders = ['Indicador', 'Valor'];
+    const resumenRows = [
+      ['Total Lotes', data.resumen.totalLotes],
+      ['Vencidos', data.resumen.vencidos],
+      ['Próximos 7 días', data.resumen.proximos7Dias],
+      ['Próximos 15 días', data.resumen.proximos15Dias],
+      ['Próximos 30 días', data.resumen.proximos30Dias],
+    ];
+    const resumenCsv = this.convertToCSV(resumenHeaders, resumenRows);
+
+    return `${mainCsv}\n\n"RESUMEN"\n${resumenCsv}`;
+  }
+
+  async exportShipmentReportCSV(data: any): Promise<string> {
+    const headers = ['Código', 'Cliente', 'Fecha Envío', 'Estado', 'Items', 'Cantidad Total', 'Transportista'];
+    const rows = data.expediciones.map((exp: any) => [
+      exp.codigo,
+      exp.cliente,
+      exp.fechaEnvio ? formatDate(exp.fechaEnvio) : '',
+      exp.estado,
+      exp.cantidadItems,
+      exp.cantidadTotal,
+      exp.transportista,
+    ]);
+    const mainCsv = this.convertToCSV(headers, rows);
+
+    const resumenHeaders = ['Indicador', 'Valor'];
+    const resumenRows = [
+      ['Total Expediciones', data.resumen.totalExpediciones],
+      ['Entregadas', data.resumen.totalEntregadas],
+      ['En Tránsito', data.resumen.totalEnTransito],
+      ['Canceladas', data.resumen.totalCanceladas],
+    ];
+    const resumenCsv = this.convertToCSV(resumenHeaders, resumenRows);
+
+    return `${mainCsv}\n\n"RESUMEN"\n${resumenCsv}`;
+  }
+
+  private convertToCSV(headers: string[], rows: any[][]): string {
+    const headerLine = headers.map(h => `"${String(h).replace(/"/g, '""')}"`).join(',');
+    const rowLines = rows.map(row => 
+      row.map(val => {
+        const strVal = val === null || val === undefined ? '' : String(val);
+        return `"${strVal.replace(/"/g, '""')}"`;
+      }).join(',')
+    );
+    return [headerLine, ...rowLines].join('\n');
+  }
 }
