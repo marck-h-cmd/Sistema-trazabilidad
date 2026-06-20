@@ -43,6 +43,7 @@ router.use('/reports', reportRoutes);
 router.use('/barcodes', barcodeRoutes);
 router.use('/labels', labelRoutes);
 router.use('/dashboard', dashboardRoutes);
+router.use('/lineas-produccion', require('./production-line.routes').default);
 
 // Health check
 router.get('/health', (_req, res) => {

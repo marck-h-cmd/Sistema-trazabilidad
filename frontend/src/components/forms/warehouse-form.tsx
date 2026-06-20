@@ -1,6 +1,6 @@
 'use client';
 
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -33,7 +33,7 @@ export function WarehouseForm({ open, onClose, warehouse }: WarehouseFormProps) 
   const queryClient = useQueryClient();
   const isEditing = !!warehouse;
 
-  const { register, handleSubmit, setValue, watch, formState: { errors, isSubmitting } } = useForm<WarehouseFormData>({
+  const { register, control, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm<WarehouseFormData>({
     resolver: zodResolver(warehouseSchema),
     defaultValues: warehouse || { tipo: 'PRINCIPAL' },
   });
@@ -60,15 +60,21 @@ export function WarehouseForm({ open, onClose, warehouse }: WarehouseFormProps) 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2"><Label className="dark:text-gray-300">Código *</Label><Input {...register('codigo')} /></div>
             <div className="space-y-2"><Label className="dark:text-gray-300">Tipo</Label>
-              <Select value={watch('tipo')} onValueChange={(v) => setValue('tipo', v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="PRINCIPAL">Principal</SelectItem>
-                  <SelectItem value="SECUNDARIO">Secundario</SelectItem>
-                  <SelectItem value="EXTERNO">Externo</SelectItem>
-                  <SelectItem value="TEMPORAL">Temporal</SelectItem>
-                </SelectContent>
-              </Select>
+              <Controller
+                control={control}
+                name="tipo"
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="PRINCIPAL">Principal</SelectItem>
+                      <SelectItem value="SECUNDARIO">Secundario</SelectItem>
+                      <SelectItem value="EXTERNO">Externo</SelectItem>
+                      <SelectItem value="TEMPORAL">Temporal</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              />
             </div>
           </div>
           <div className="space-y-2"><Label className="dark:text-gray-300">Nombre *</Label><Input {...register('nombre')} /></div>

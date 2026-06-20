@@ -8,6 +8,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { productionsApi } from '@/lib/api/productions.api';
 import { productsApi } from '@/lib/api/products.api';
 import { inventoryApi } from '@/lib/api/inventory.api';
+import api from '@/lib/axios';
 import { BarcodeScanner } from '@/components/scanner/barcode-scanner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -117,16 +118,22 @@ export function ProductionForm({ onSuccess }: ProductionFormProps) {
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label className="dark:text-gray-300">Línea de Producción *</Label>
-                  <Select value={watch('lineaProduccionId')} onValueChange={(v) => setValue('lineaProduccionId', v)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar línea" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {lines?.map((l: any) => (
-                        <SelectItem key={l.id} value={l.id}>{l.codigo} - {l.nombre}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Controller
+                    control={control}
+                    name="lineaProduccionId"
+                    render={({ field }) => (
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seleccionar línea" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {lines?.map((l: any) => (
+                            <SelectItem key={l.id} value={l.id}>{l.codigo} - {l.nombre}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
                 </div>
 
                 <div className="space-y-2">
@@ -197,16 +204,22 @@ export function ProductionForm({ onSuccess }: ProductionFormProps) {
               <CardTitle className="text-base dark:text-gray-100">Etiquetas</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <Select value={watch('tipoEtiqueta')} onValueChange={(v) => setValue('tipoEtiqueta', v)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="CODE_128">Code 128 (Pallets)</SelectItem>
-                  <SelectItem value="QR">QR (Bolsas)</SelectItem>
-                  <SelectItem value="AMBOS">Ambos</SelectItem>
-                </SelectContent>
-              </Select>
+              <Controller
+                control={control}
+                name="tipoEtiqueta"
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="CODE_128">Code 128 (Pallets)</SelectItem>
+                      <SelectItem value="QR">QR (Bolsas)</SelectItem>
+                      <SelectItem value="AMBOS">Ambos</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              />
               <Input type="number" placeholder="Cantidad etiquetas" {...register('cantidadEtiquetas')} />
             </CardContent>
           </Card>
@@ -219,6 +232,4 @@ export function ProductionForm({ onSuccess }: ProductionFormProps) {
       </div>
     </form>
   );
-}
-
-import api from '@/lib/axios';
+}

@@ -1,6 +1,6 @@
 'use client';
 
-import { usePathname } from 'next/navigation';
+import React from 'react';import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import {
   Breadcrumb,
@@ -66,20 +66,22 @@ export function BreadcrumbNav({ className }: BreadcrumbNavProps) {
           const label = ROUTE_LABELS[segment] || segment.replace(/-/g, ' ');
 
           return (
-            <BreadcrumbItem key={path}>
+            <React.Fragment key={path}>
               <BreadcrumbSeparator />
-              {isLast ? (
-                <BreadcrumbPage className="font-medium text-foreground dark:text-gray-200">
-                  {label}
-                </BreadcrumbPage>
-              ) : (
-                <BreadcrumbLink asChild>
-                  <Link href={path} className="text-muted-foreground hover:text-foreground dark:text-gray-400 dark:hover:text-gray-200">
+              <BreadcrumbItem>
+                {isLast ? (
+                  <BreadcrumbPage className="font-medium text-foreground dark:text-gray-200">
                     {label}
-                  </Link>
-                </BreadcrumbLink>
-              )}
-            </BreadcrumbItem>
+                  </BreadcrumbPage>
+                ) : (
+                  <BreadcrumbLink asChild>
+                    <Link href={path} className="text-muted-foreground hover:text-foreground dark:text-gray-400 dark:hover:text-gray-200">
+                      {label}
+                    </Link>
+                  </BreadcrumbLink>
+                )}
+              </BreadcrumbItem>
+            </React.Fragment>
           );
         })}
       </BreadcrumbList>

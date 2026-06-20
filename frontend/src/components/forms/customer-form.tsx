@@ -1,6 +1,6 @@
 'use client';
 
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { customersApi } from '@/lib/api/customers.api';
@@ -26,7 +26,7 @@ export function CustomerForm({ open, onClose, customer }: CustomerFormProps) {
   const queryClient = useQueryClient();
   const isEditing = !!customer;
 
-  const { register, handleSubmit, setValue, watch, formState: { errors, isSubmitting } } = useForm<CustomerFormData>({
+  const { register, control, handleSubmit, setValue, watch, formState: { errors, isSubmitting } } = useForm<CustomerFormData>({
     resolver: zodResolver(customerSchema),
     defaultValues: customer ? {
       codigo: customer.codigo,
@@ -77,10 +77,16 @@ export function CustomerForm({ open, onClose, customer }: CustomerFormProps) {
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2"><Label className="dark:text-gray-300">Código *</Label><Input {...register('codigo')} /></div>
             <div className="space-y-2"><Label className="dark:text-gray-300">Tipo *</Label>
-              <Select value={watch('tipo')} onValueChange={(v) => setValue('tipo', v)}>
-                <SelectTrigger><SelectValue placeholder="Tipo" /></SelectTrigger>
-                <SelectContent>{TIPOS_CLIENTE.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent>
-              </Select>
+              <Controller
+                control={control}
+                name="tipo"
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger><SelectValue placeholder="Tipo" /></SelectTrigger>
+                    <SelectContent>{TIPOS_CLIENTE.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent>
+                  </Select>
+                )}
+              />
             </div>
           </div>
           <div className="space-y-2"><Label className="dark:text-gray-300">Nombre *</Label><Input {...register('nombre')} /></div>

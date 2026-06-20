@@ -107,14 +107,20 @@ export function ProductForm({ open, onClose, product }: ProductFormProps) {
             </div>
             <div className="space-y-2">
               <Label className="dark:text-gray-300">Categoría *</Label>
-              <Select value={watch('categoria')} onValueChange={(v) => setValue('categoria', v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {CATEGORIAS_PRODUCTO.map((c) => (
-                    <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Controller
+                control={control}
+                name="categoria"
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {CATEGORIAS_PRODUCTO.map((c) => (
+                        <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
             </div>
           </div>
 
@@ -132,14 +138,20 @@ export function ProductForm({ open, onClose, product }: ProductFormProps) {
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label className="dark:text-gray-300">Unidad *</Label>
-              <Select value={watch('unidadMedida')} onValueChange={(v) => setValue('unidadMedida', v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {UNIDADES_MEDIDA.map((u) => (
-                    <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Controller
+                control={control}
+                name="unidadMedida"
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {UNIDADES_MEDIDA.map((u) => (
+                        <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
             </div>
             <div className="space-y-2">
               <Label className="dark:text-gray-300">Vida Útil (días) *</Label>

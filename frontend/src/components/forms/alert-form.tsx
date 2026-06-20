@@ -101,29 +101,41 @@ export function AlertForm({ onSuccess }: AlertFormProps) {
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label className="dark:text-gray-300">Tipo *</Label>
-              <Select value={watch('tipo')} onValueChange={(v) => setValue('tipo', v)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar tipo" />
-                </SelectTrigger>
-                <SelectContent>
-                  {TIPOS_ALERTA.map((t) => (
-                    <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Controller
+                control={control}
+                name="tipo"
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar tipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {TIPOS_ALERTA.map((t) => (
+                        <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
             </div>
             <div className="space-y-2">
               <Label className="dark:text-gray-300">Severidad *</Label>
-              <Select value={watch('severidad')} onValueChange={(v) => setValue('severidad', v)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar severidad" />
-                </SelectTrigger>
-                <SelectContent>
-                  {SEVERIDAD_ALERTA.map((s) => (
-                    <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Controller
+                control={control}
+                name="severidad"
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar severidad" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {SEVERIDAD_ALERTA.map((s) => (
+                        <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
             </div>
           </div>
 

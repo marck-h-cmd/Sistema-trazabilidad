@@ -1,6 +1,6 @@
 'use client';
 
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { usersApi } from '@/lib/api/users.api';
@@ -36,7 +36,7 @@ export function UserForm({ open, onClose, user }: UserFormProps) {
   const queryClient = useQueryClient();
   const isEditing = !!user;
 
-  const { register, handleSubmit, setValue, watch, formState: { errors, isSubmitting } } = useForm<UserFormData>({
+  const { register, control, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm<UserFormData>({
     resolver: zodResolver(userSchema),
     defaultValues: user ? {
       email: user.email,
@@ -105,12 +105,18 @@ export function UserForm({ open, onClose, user }: UserFormProps) {
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label className="dark:text-gray-300">Rol *</Label>
-              <Select value={watch('rol')} onValueChange={(v) => setValue('rol', v)}>
-                <SelectTrigger><SelectValue placeholder="Seleccionar rol" /></SelectTrigger>
-                <SelectContent>
-                  {ROLES.map((r) => <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <Controller
+                control={control}
+                name="rol"
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger><SelectValue placeholder="Seleccionar rol" /></SelectTrigger>
+                    <SelectContent>
+                      {ROLES.map((r) => <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
             </div>
             <div className="space-y-2">
               <Label className="dark:text-gray-300">Teléfono</Label>
