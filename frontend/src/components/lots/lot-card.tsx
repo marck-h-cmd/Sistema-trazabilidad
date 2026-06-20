@@ -1,5 +1,9 @@
 'use client';
 
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { barcodesApi } from '@/lib/api/barcodes.api';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { LotStatusBadge } from './lot-status-badge';
@@ -12,6 +16,8 @@ import {
   Clock,
   Hash,
   QrCode,
+  Barcode,
+  Download,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatDate, formatNumber } from '@/lib/formatters';
@@ -27,6 +33,7 @@ interface LotCardProps {
 
 export function LotCard({ lot, onClick, className, showActions = true }: LotCardProps) {
   const router = useRouter();
+  const [showCodesModal, setShowCodesModal] = useState(false);
 
   const handleClick = () => {
     if (onClick) {
@@ -34,6 +41,36 @@ export function LotCard({ lot, onClick, className, showActions = true }: LotCard
     } else {
       router.push(`/trazabilidad/${lot.codigo}`);
     }
+  };
+
+  const { data: barcodeData, isLoading: barcodeLoading } = useQuery({
+    queryKey: ['barcode-preview', lot.codigo],
+    queryFn: () => barcodesApi.generate({ code: lot.codigo, type: 'code128', scale: 2, height: 40 }),
+    enabled: showCodesModal,
+  });
+
+  const { data: qrData, isLoading: qrLoading } = useQuery({
+    queryKey: ['qr-preview', lot.codigo],
+    queryFn: () => barcodesApi.generateQR({ code: lot.codigo, size: 200 }),
+    enabled: showCodesModal,
+  });
+
+  const downloadBarcode = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!barcodeData?.data?.data?.image) return;
+    const link = document.createElement('a');
+    link.href = `data:image/png;base64,${barcodeData.data.data.image}`;
+    link.download = `barcode-${lot.codigo}.png`;
+    link.click();
+  };
+
+  const downloadQR = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!qrData?.data?.data?.dataUrl) return;
+    const link = document.createElement('a');
+    link.href = qrData.data.data.dataUrl;
+    link.download = `qrcode-${lot.codigo}.png`;
+    link.click();
   };
 
   const daysUntilExpiry = lot.fechaCaducidad
@@ -119,22 +156,90 @@ export function LotCard({ lot, onClick, className, showActions = true }: LotCard
         {/* Acciones */}
         {showActions && (
           <div className="mt-3 flex items-center justify-between border-t pt-3 dark:border-gray-700">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-xs gap-1 dark:hover:bg-gray-800"
-              onClick={(e) => {
-                e.stopPropagation();
-                router.push(`/trazabilidad/${lot.codigo}`);
-              }}
-            >
-              <QrCode className="h-3.5 w-3.5" />
-              Trazabilidad
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-xs gap-1 dark:hover:bg-gray-800"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  router.push(`/trazabilidad/${lot.codigo}`);
+                }}
+              >
+                <QrCode className="h-3.5 w-3.5" />
+                Trazabilidad
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-xs gap-1 dark:hover:bg-gray-800 text-muted-foreground hover:text-foreground"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowCodesModal(true);
+                }}
+              >
+                <Barcode className="h-3.5 w-3.5" />
+                Códigos
+              </Button>
+            </div>
             <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
           </div>
         )}
       </CardContent>
+
+      <Dialog open={showCodesModal} onOpenChange={setShowCodesModal}>
+        <DialogContent className="sm:max-w-md dark:border-gray-800 dark:bg-gray-900" onClick={(e) => e.stopPropagation()}>
+          <DialogHeader>
+            <DialogTitle className="dark:text-gray-100">Códigos del Lote: {lot.codigo}</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-6 py-4 sm:grid-cols-2">
+            {/* Barcode */}
+            <div className="flex flex-col items-center gap-2 rounded-xl border p-4 bg-white dark:bg-gray-800 dark:border-gray-700">
+              <p className="text-xs font-semibold text-muted-foreground dark:text-gray-400 mb-2">Código de Barras (Code 128)</p>
+              {barcodeLoading ? (
+                <div className="h-12 w-40 animate-pulse bg-gray-200 dark:bg-gray-700 rounded" />
+              ) : barcodeData?.data?.data?.image ? (
+                <>
+                  <img
+                    src={`data:image/png;base64,${barcodeData.data.data.image}`}
+                    alt="Código de barras"
+                    className="h-12 max-w-full object-contain"
+                    style={{ imageRendering: 'pixelated' }}
+                  />
+                  <Button variant="outline" size="sm" className="mt-2 gap-1 dark:border-gray-600" onClick={downloadBarcode}>
+                    <Download className="h-3.5 w-3.5" />
+                    Descargar
+                  </Button>
+                </>
+              ) : (
+                <p className="text-xs text-destructive">Error al cargar</p>
+              )}
+            </div>
+
+            {/* QR */}
+            <div className="flex flex-col items-center gap-2 rounded-xl border p-4 bg-white dark:bg-gray-800 dark:border-gray-700">
+              <p className="text-xs font-semibold text-muted-foreground dark:text-gray-400 mb-2">Código QR (Trazabilidad)</p>
+              {qrLoading ? (
+                <div className="h-20 w-20 animate-pulse bg-gray-200 dark:bg-gray-700 rounded" />
+              ) : qrData?.data?.data?.dataUrl ? (
+                <>
+                  <img
+                    src={qrData.data.data.dataUrl}
+                    alt="Código QR"
+                    className="h-20 w-20 object-contain"
+                  />
+                  <Button variant="outline" size="sm" className="mt-2 gap-1 dark:border-gray-600" onClick={downloadQR}>
+                    <Download className="h-3.5 w-3.5" />
+                    Descargar
+                  </Button>
+                </>
+              ) : (
+                <p className="text-xs text-destructive">Error al cargar</p>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

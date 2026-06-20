@@ -78,14 +78,23 @@ export function LabelPreview({
                   {weight && (
                     <p className="text-xs text-gray-600">Peso: {weight}</p>
                   )}
-                  {barcodeImage && (
-                    <img
-                      src={`data:image/png;base64,${barcodeImage}`}
-                      alt="Barcode"
-                      className="mx-auto h-12"
-                    />
-                  )}
-                  {!barcodeImage && (
+                  {barcodeImage ? (
+                    <div className="flex flex-col items-center gap-1">
+                      <img
+                        src={`data:image/png;base64,${barcodeImage}`}
+                        alt="Barcode"
+                        className="mx-auto h-12"
+                      />
+                      <a
+                        href={`data:image/png;base64,${barcodeImage}`}
+                        download={`barcode-${lotCode}.png`}
+                        className="inline-flex items-center gap-1 text-xs text-primary hover:underline font-medium"
+                      >
+                        <Download className="h-3.5 w-3.5" />
+                        Descargar Barras
+                      </a>
+                    </div>
+                  ) : (
                     <div className="mx-auto h-12 w-40 bg-gray-200 rounded flex items-center justify-center">
                       <p className="text-xs text-gray-500">Code 128</p>
                     </div>
@@ -126,11 +135,21 @@ export function LabelPreview({
                   </div>
                   <div className="flex-shrink-0">
                     {qrImage ? (
-                      <img
-                        src={qrImage}
-                        alt="QR"
-                        className="h-20 w-20"
-                      />
+                      <div className="flex flex-col items-center gap-1">
+                        <img
+                          src={qrImage}
+                          alt="QR"
+                          className="h-20 w-20"
+                        />
+                        <a
+                          href={qrImage}
+                          download={`qrcode-${lotCode}.png`}
+                          className="inline-flex items-center gap-1 text-xs text-primary hover:underline font-medium"
+                        >
+                          <Download className="h-3.5 w-3.5" />
+                          Descargar QR
+                        </a>
+                      </div>
                     ) : (
                       <div className="h-20 w-20 bg-gray-200 rounded flex items-center justify-center">
                         <p className="text-xs text-gray-500">QR</p>
