@@ -1,8 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { labelsApi } from '@/lib/api/labels.api';
+import { barcodesApi } from '@/lib/api/barcodes.api';
 import { LabelPreview } from '@/components/barcode/label-preview';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -45,6 +46,18 @@ export function LotPrintLabel({ lot, onPrint, className }: LotPrintLabelProps) {
         variant: 'destructive',
       });
     },
+  });
+
+  const { data: barcodeData } = useQuery({
+    queryKey: ['barcode-preview', lot.codigo],
+    queryFn: () => barcodesApi.generate({ code: lot.codigo, type: 'code128', scale: 2, height: 40 }),
+    enabled: labelType === 'CODE_128' || labelType === 'AMBOS',
+  });
+
+  const { data: qrData } = useQuery({
+    queryKey: ['qr-preview', lot.codigo],
+    queryFn: () => barcodesApi.generateQR({ code: lot.codigo, size: 200 }),
+    enabled: labelType === 'QR' || labelType === 'AMBOS',
   });
 
   const handlePrint = () => {
@@ -112,6 +125,8 @@ export function LotPrintLabel({ lot, onPrint, className }: LotPrintLabelProps) {
           expiryDate={lot.fechaCaducidad || undefined}
           weight={`${lot.cantidad} ${lot.unidadMedida}`}
           labelType={labelType}
+          barcodeImage={barcodeData?.data?.data?.image}
+          qrImage={qrData?.data?.data?.dataUrl}
         />
 
         <Button

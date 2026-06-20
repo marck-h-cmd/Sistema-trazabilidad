@@ -38,10 +38,14 @@ export function CameraViewfinder({ isActive, isLoading, children, className }: C
       )}
 
       {/* Contenido (cámara activa) */}
+      {(isActive || isLoading) && (
+        <div className={cn("absolute inset-0 w-full h-full", !isActive && "opacity-0 pointer-events-none")}>
+          {children}
+        </div>
+      )}
+
       {isActive && (
         <>
-          {children}
-
           {/* Overlay de guía de escaneo */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div className="relative h-32 w-64 sm:h-40 sm:w-80">
