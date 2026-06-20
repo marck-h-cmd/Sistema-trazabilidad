@@ -36,7 +36,7 @@ export function UserForm({ open, onClose, user }: UserFormProps) {
   const queryClient = useQueryClient();
   const isEditing = !!user;
 
-  const { register, handleSubmit, setValue, formState: { errors, isSubmitting } } = useForm<UserFormData>({
+  const { register, handleSubmit, setValue, watch, formState: { errors, isSubmitting } } = useForm<UserFormData>({
     resolver: zodResolver(userSchema),
     defaultValues: user ? {
       email: user.email,
@@ -105,7 +105,7 @@ export function UserForm({ open, onClose, user }: UserFormProps) {
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label className="dark:text-gray-300">Rol *</Label>
-              <Select defaultValue={user?.rol} onValueChange={(v) => setValue('rol', v)}>
+              <Select value={watch('rol')} onValueChange={(v) => setValue('rol', v)}>
                 <SelectTrigger><SelectValue placeholder="Seleccionar rol" /></SelectTrigger>
                 <SelectContent>
                   {ROLES.map((r) => <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>)}

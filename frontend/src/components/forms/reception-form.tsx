@@ -235,7 +235,7 @@ export function ReceptionForm({ onSuccess }: ReceptionFormProps) {
                     <div className="space-y-2">
                       <Label className="dark:text-gray-300">Unidad</Label>
                       <Select
-                        defaultValue="kg"
+                        value={watch(`lotes.${index}.unidadMedida`)}
                         onValueChange={(value) => setValue(`lotes.${index}.unidadMedida`, value)}
                       >
                         <SelectTrigger>

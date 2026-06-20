@@ -33,7 +33,7 @@ export function WarehouseForm({ open, onClose, warehouse }: WarehouseFormProps) 
   const queryClient = useQueryClient();
   const isEditing = !!warehouse;
 
-  const { register, handleSubmit, setValue, formState: { errors, isSubmitting } } = useForm<WarehouseFormData>({
+  const { register, handleSubmit, setValue, watch, formState: { errors, isSubmitting } } = useForm<WarehouseFormData>({
     resolver: zodResolver(warehouseSchema),
     defaultValues: warehouse || { tipo: 'PRINCIPAL' },
   });
@@ -60,7 +60,7 @@ export function WarehouseForm({ open, onClose, warehouse }: WarehouseFormProps) 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2"><Label className="dark:text-gray-300">Código *</Label><Input {...register('codigo')} /></div>
             <div className="space-y-2"><Label className="dark:text-gray-300">Tipo</Label>
-              <Select defaultValue={warehouse?.tipo || 'PRINCIPAL'} onValueChange={(v) => setValue('tipo', v)}>
+              <Select value={watch('tipo')} onValueChange={(v) => setValue('tipo', v)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="PRINCIPAL">Principal</SelectItem>

@@ -69,6 +69,7 @@ export function ProductionForm({ onSuccess }: ProductionFormProps) {
     handleSubmit,
     control,
     setValue,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<ProductionFormData>({
     resolver: zodResolver(productionSchema),
@@ -116,7 +117,7 @@ export function ProductionForm({ onSuccess }: ProductionFormProps) {
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label className="dark:text-gray-300">Línea de Producción *</Label>
-                  <Select onValueChange={(v) => setValue('lineaProduccionId', v)}>
+                  <Select value={watch('lineaProduccionId')} onValueChange={(v) => setValue('lineaProduccionId', v)}>
                     <SelectTrigger>
                       <SelectValue placeholder="Seleccionar línea" />
                     </SelectTrigger>
@@ -196,7 +197,7 @@ export function ProductionForm({ onSuccess }: ProductionFormProps) {
               <CardTitle className="text-base dark:text-gray-100">Etiquetas</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <Select defaultValue="AMBOS" onValueChange={(v) => setValue('tipoEtiqueta', v)}>
+              <Select value={watch('tipoEtiqueta')} onValueChange={(v) => setValue('tipoEtiqueta', v)}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>

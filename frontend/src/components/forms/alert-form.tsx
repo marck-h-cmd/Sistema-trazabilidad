@@ -43,6 +43,7 @@ export function AlertForm({ onSuccess }: AlertFormProps) {
     register,
     handleSubmit,
     setValue,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<AlertFormData>({
     resolver: zodResolver(alertSchema),
@@ -100,7 +101,7 @@ export function AlertForm({ onSuccess }: AlertFormProps) {
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label className="dark:text-gray-300">Tipo *</Label>
-              <Select onValueChange={(v) => setValue('tipo', v)}>
+              <Select value={watch('tipo')} onValueChange={(v) => setValue('tipo', v)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Seleccionar tipo" />
                 </SelectTrigger>
@@ -113,7 +114,7 @@ export function AlertForm({ onSuccess }: AlertFormProps) {
             </div>
             <div className="space-y-2">
               <Label className="dark:text-gray-300">Severidad *</Label>
-              <Select onValueChange={(v) => setValue('severidad', v)}>
+              <Select value={watch('severidad')} onValueChange={(v) => setValue('severidad', v)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Seleccionar severidad" />
                 </SelectTrigger>

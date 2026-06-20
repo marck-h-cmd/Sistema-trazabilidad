@@ -107,7 +107,7 @@ export function ProductForm({ open, onClose, product }: ProductFormProps) {
             </div>
             <div className="space-y-2">
               <Label className="dark:text-gray-300">Categoría *</Label>
-              <Select defaultValue={product?.categoria || 'PRODUCTO_TERMINADO'} onValueChange={(v) => setValue('categoria', v)}>
+              <Select value={watch('categoria')} onValueChange={(v) => setValue('categoria', v)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {CATEGORIAS_PRODUCTO.map((c) => (
@@ -132,7 +132,7 @@ export function ProductForm({ open, onClose, product }: ProductFormProps) {
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label className="dark:text-gray-300">Unidad *</Label>
-              <Select defaultValue={product?.unidadMedida || 'kg'} onValueChange={(v) => setValue('unidadMedida', v)}>
+              <Select value={watch('unidadMedida')} onValueChange={(v) => setValue('unidadMedida', v)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {UNIDADES_MEDIDA.map((u) => (
