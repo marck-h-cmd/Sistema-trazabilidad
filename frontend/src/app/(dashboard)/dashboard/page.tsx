@@ -15,10 +15,7 @@ import { RecentShipments } from '@/components/dashboard/recent-shipments';
 import { EmptyState } from '@/components/shared/empty-state';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { 
-  LayoutDashboard, 
-  RefreshCw,
-} from 'lucide-react';
+import { LayoutDashboard, RefreshCw } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -48,29 +45,31 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <PageHeader
-        title="Dashboard"
-        description={today}
-      >
-        <Button variant="outline" size="sm" onClick={() => refetchKPIs()} className="dark:border-gray-700">
+    <div className="animate-fade-in space-y-6">
+      <PageHeader title="Dashboard" description={today}>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => refetchKPIs()}
+          className="dark:border-gray-700"
+        >
           <RefreshCw className="mr-2 h-4 w-4" />
           Actualizar
         </Button>
       </PageHeader>
 
       {/* KPIs Principales */}
-      <StatsCards data={kpis?.data} isLoading={kpisLoading} />
+      <StatsCards data={kpis?.data?.data} isLoading={kpisLoading} />
 
       {/* Contenido principal */}
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Columna izquierda - Gráfico y actividad */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="space-y-6 lg:col-span-2">
           {/* Gráfico de stock */}
           {kpisLoading ? (
             <Skeleton className="h-[320px] rounded-xl" />
           ) : (
-            <StockChart data={kpis?.data?.stockPorCategoria} />
+            <StockChart data={kpis?.data?.data?.stockPorCategoria} />
           )}
 
           {/* Actividad reciente */}
@@ -88,14 +87,14 @@ export default function DashboardPage() {
         <div className="space-y-6">
           {/* Caducidades */}
           <ExpiryAlerts
-            lotesPorVencer={kpis?.data?.lotesPorVencer || 0}
-            lotesVencidos={kpis?.data?.lotesVencidos || 0}
+            lotesPorVencer={kpis?.data?.data?.lotesPorVencer || 0}
+            lotesVencidos={kpis?.data?.data?.lotesVencidos || 0}
             isLoading={kpisLoading}
           />
 
           {/* Alertas activas */}
           <AlertsSummary
-            alertasActivas={kpis?.data?.alertasActivas || 0}
+            alertasActivas={kpis?.data?.data?.alertasActivas || 0}
             isLoading={kpisLoading}
           />
 
