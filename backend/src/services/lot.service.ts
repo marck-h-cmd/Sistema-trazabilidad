@@ -97,6 +97,7 @@ export class LotService {
       ubicacion: data.ubicacionId ? { connect: { id: data.ubicacionId } } : undefined,
       almacen: data.almacenId ? { connect: { id: data.almacenId } } : undefined,
       lotePadre: data.lotePadreId ? { connect: { id: data.lotePadreId } } : undefined,
+      recepcion: data.recepcionId ? { connect: { id: data.recepcionId } } : undefined,
       numeroLoteProveedor: data.numeroLoteProveedor,
       observaciones: data.observaciones,
       creador: { connect: { id: userId } },

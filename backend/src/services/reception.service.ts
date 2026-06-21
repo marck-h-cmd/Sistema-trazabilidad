@@ -60,22 +60,25 @@ export class ReceptionService {
     return reception;
   }
 
-  async create(data: {
-    proveedorId: string;
-    metodoEntrada?: string;
-    numeroAlbaran?: string;
-    numeroFactura?: string;
-    lotes: {
-      productoId: string;
-      cantidad: number;
-      unidadMedida: string;
-      fechaCaducidad?: string;
-      ubicacionId?: string;
-      numeroLoteProveedor?: string;
-      temperaturaLlegada?: number;
-    }[];
-    observaciones?: string;
-  }, userId: string) {
+  async create(
+    data: {
+      proveedorId: string;
+      metodoEntrada?: string;
+      numeroAlbaran?: string;
+      numeroFactura?: string;
+      lotes: {
+        productoId: string;
+        cantidad: number;
+        unidadMedida: string;
+        fechaCaducidad?: string;
+        ubicacionId?: string;
+        numeroLoteProveedor?: string;
+        temperaturaLlegada?: number;
+      }[];
+      observaciones?: string;
+    },
+    userId: string
+  ) {
     const proveedor = await prisma.proveedor.findUnique({ where: { id: data.proveedorId } });
 
     if (!proveedor) {
@@ -95,15 +98,19 @@ export class ReceptionService {
     });
 
     for (const loteData of data.lotes) {
-      const lote = await this.lotService.create({
-        productoId: loteData.productoId,
-        cantidad: loteData.cantidad,
-        unidadMedida: loteData.unidadMedida,
-        fechaRecepcion: new Date(),
-        fechaCaducidad: loteData.fechaCaducidad ? new Date(loteData.fechaCaducidad) : undefined,
-        ubicacionId: loteData.ubicacionId,
-        numeroLoteProveedor: loteData.numeroLoteProveedor,
-      }, userId);
+      const lote = await this.lotService.create(
+        {
+          productoId: loteData.productoId,
+          cantidad: loteData.cantidad,
+          unidadMedida: loteData.unidadMedida,
+          fechaRecepcion: new Date(),
+          fechaCaducidad: loteData.fechaCaducidad ? new Date(loteData.fechaCaducidad) : undefined,
+          ubicacionId: loteData.ubicacionId,
+          numeroLoteProveedor: loteData.numeroLoteProveedor,
+          recepcionId: reception.id,
+        },
+        userId
+      );
 
       await prisma.materiaPrima.create({
         data: {

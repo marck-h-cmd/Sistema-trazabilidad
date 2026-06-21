@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useMutation } from '@tanstack/react-query';
@@ -9,17 +9,18 @@ import { alertsApi } from '@/lib/api/alerts.api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/components/ui/toast';
 import { TIPOS_ALERTA, SEVERIDAD_ALERTA } from '@/lib/constants';
-import { 
-  AlertTriangle, 
-  Save,
-  Loader2,
-  Scan,
-} from 'lucide-react';
+import { AlertTriangle, Save, Loader2, Scan } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 const alertSchema = z.object({
@@ -42,6 +43,7 @@ export function AlertForm({ onSuccess }: AlertFormProps) {
   const {
     register,
     handleSubmit,
+    control,
     setValue,
     watch,
     formState: { errors, isSubmitting },
@@ -88,7 +90,7 @@ export function AlertForm({ onSuccess }: AlertFormProps) {
             <div className="flex gap-2">
               <Input
                 placeholder="Código de lote (ej: L260625L301)"
-                className="font-mono flex-1"
+                className="flex-1 font-mono"
                 {...register('loteId')}
               />
               <Button type="button" variant="outline" size="icon">
@@ -111,7 +113,9 @@ export function AlertForm({ onSuccess }: AlertFormProps) {
                     </SelectTrigger>
                     <SelectContent>
                       {TIPOS_ALERTA.map((t) => (
-                        <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                        <SelectItem key={t.value} value={t.value}>
+                          {t.label}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -130,7 +134,9 @@ export function AlertForm({ onSuccess }: AlertFormProps) {
                     </SelectTrigger>
                     <SelectContent>
                       {SEVERIDAD_ALERTA.map((s) => (
-                        <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                        <SelectItem key={s.value} value={s.value}>
+                          {s.label}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -153,7 +159,11 @@ export function AlertForm({ onSuccess }: AlertFormProps) {
             />
           </div>
           <Button type="submit" className="w-full gap-2" size="lg" disabled={isSubmitting}>
-            {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            {isSubmitting ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4" />
+            )}
             Guardar Alerta
           </Button>
         </CardContent>

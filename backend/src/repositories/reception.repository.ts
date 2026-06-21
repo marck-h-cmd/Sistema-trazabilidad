@@ -36,6 +36,13 @@ export class ReceptionRepository {
         receptor: {
           select: { id: true, nombre: true, apellido: true },
         },
+        lotes: {
+          include: {
+            producto: {
+              select: { id: true, nombre: true, sku: true, categoria: true },
+            },
+          },
+        },
         documentos: true,
       },
     });
