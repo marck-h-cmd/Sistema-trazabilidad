@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # ==========================================
   # BASE DE DATOS
@@ -17,7 +15,6 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - trazabilidad-network
     healthcheck:
@@ -62,21 +59,21 @@ services:
       API_PREFIX: /api/v1
       DATABASE_URL: "postgresql://postgres:${DB_PASSWORD:-password}@postgres:5432/trazabilidad?schema=public"
       REDIS_URL: "redis://:${REDIS_PASSWORD:-redispass}@redis:6379"
-      JWT_SECRET: ${JWT_SECRET}
-      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production-jwt-secret}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-change-me-in-production-refresh-secret}
       JWT_EXPIRATION: 15m
       JWT_REFRESH_EXPIRATION: 7d
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
-      SMTP_HOST: ${SMTP_HOST}
+      SMTP_HOST: ${SMTP_HOST:-smtp.mailtrap.io}
       SMTP_PORT: ${SMTP_PORT:-587}
-      SMTP_USER: ${SMTP_USER}
-      SMTP_PASS: ${SMTP_PASS}
-      EMAIL_FROM: ${EMAIL_FROM}
-      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
-      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      EMAIL_FROM: ${EMAIL_FROM:-noreply@trazabilidad.com}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
       AWS_REGION: ${AWS_REGION:-us-east-1}
-      AWS_S3_BUCKET: ${AWS_S3_BUCKET}
-      QR_BASE_URL: ${QR_BASE_URL}
+      AWS_S3_BUCKET: ${AWS_S3_BUCKET:-trazabilidad-docs}
+      QR_BASE_URL: ${QR_BASE_URL:-http://localhost:3000/t}
       LOG_LEVEL: ${LOG_LEVEL:-info}
       LOG_DIR: /app/logs
       UPLOAD_DIR: /app/uploads
@@ -93,7 +90,7 @@ services:
     networks:
       - trazabilidad-network
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3001/health"]
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:3001/health', (r) => r.statusCode === 200 ? process.exit(0) : process.exit(1))\""]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -122,7 +119,7 @@ services:
     networks:
       - trazabilidad-network
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000"]
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:3000', (r) => r.statusCode === 200 ? process.exit(0) : process.exit(1))\""]
       interval: 30s
       timeout: 10s
       retries: 3
