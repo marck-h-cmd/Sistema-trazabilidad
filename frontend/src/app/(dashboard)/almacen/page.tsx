@@ -32,7 +32,7 @@ export default function AlmacenPage() {
   const router = useRouter();
 
   const { data: warehouses } = useQuery({
-    queryKey: ['warehouses-list'],
+    queryKey: ['warehouses', 'list'],
     queryFn: () => warehousesApi.getAll({ limit: 100 }),
   });
 

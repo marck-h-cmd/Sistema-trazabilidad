@@ -10,7 +10,9 @@ export class WarehouseService {
       limit: query.limit,
     });
 
-    const where: Prisma.AlmacenWhereInput = {};
+    const where: Prisma.AlmacenWhereInput = {
+      activo: true,
+    };
 
     if (query.search) {
       where.OR = [

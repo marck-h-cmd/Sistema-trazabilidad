@@ -15,6 +15,7 @@ import reportRoutes from './report.routes';
 import barcodeRoutes from './barcode.routes';
 import labelRoutes from './label.routes';
 import dashboardRoutes from './dashboard.routes';
+import productionLineRoutes from './production-line.routes';
 
 const router = Router();
 
@@ -43,7 +44,7 @@ router.use('/reports', reportRoutes);
 router.use('/barcodes', barcodeRoutes);
 router.use('/labels', labelRoutes);
 router.use('/dashboard', dashboardRoutes);
-router.use('/lineas-produccion', require('./production-line.routes').default);
+router.use('/lineas-produccion', productionLineRoutes);
 
 // Health check
 router.get('/health', (_req, res) => {

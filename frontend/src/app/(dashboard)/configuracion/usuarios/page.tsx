@@ -104,7 +104,7 @@ export default function UsuariosConfigPage() {
   const debouncedSearch = useDebounce(search, 300);
 
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ['users-config', page, debouncedSearch, rolFilter],
+    queryKey: ['users', 'config', page, debouncedSearch, rolFilter],
     queryFn: () =>
       usersApi.getAll({
         page,
@@ -117,7 +117,7 @@ export default function UsuariosConfigPage() {
   const deleteMutation = useMutation({
     mutationFn: (id: string) => usersApi.delete(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users-config'] });
+      queryClient.invalidateQueries({ queryKey: ['users'] });
       toast({ title: 'Usuario desactivado', variant: 'success' });
       setShowDeleteConfirm(false);
       setUserToDelete(null);
@@ -231,11 +231,13 @@ export default function UsuariosConfigPage() {
       )}
 
       {/* Modal formulario */}
-      <UserForm
-        open={showForm}
-        onClose={handleCloseForm}
-        user={selectedUser}
-      />
+      {showForm && (
+        <UserForm
+          open={showForm}
+          onClose={handleCloseForm}
+          user={selectedUser}
+        />
+      )}
 
       {/* Confirmación eliminar */}
       <ConfirmDialog

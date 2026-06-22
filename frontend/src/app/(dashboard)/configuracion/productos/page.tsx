@@ -121,7 +121,7 @@ export default function ProductosConfigPage() {
   const debouncedSearch = useDebounce(search, 300);
 
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ['products-config', page, debouncedSearch, categoriaFilter],
+    queryKey: ['products', 'config', page, debouncedSearch, categoriaFilter],
     queryFn: () =>
       productsApi.getAll({
         page,
@@ -134,7 +134,7 @@ export default function ProductosConfigPage() {
   const deleteMutation = useMutation({
     mutationFn: (id: string) => productsApi.delete(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['products-config'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
       toast({ title: 'Producto desactivado', variant: 'success' });
       setShowDeleteConfirm(false);
     },
@@ -230,7 +230,9 @@ export default function ProductosConfigPage() {
         />
       )}
 
-      <ProductForm open={showForm} onClose={() => { setShowForm(false); refetch(); }} product={selectedProduct} />
+      {showForm && (
+        <ProductForm open={showForm} onClose={() => { setShowForm(false); refetch(); }} product={selectedProduct} />
+      )}
 
       <ConfirmDialog
         open={showDeleteConfirm}

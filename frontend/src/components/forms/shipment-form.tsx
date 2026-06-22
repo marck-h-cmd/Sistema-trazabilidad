@@ -51,7 +51,7 @@ export function ShipmentForm({ onSuccess }: ShipmentFormProps) {
   const router = useRouter();
 
   const { data: customers } = useQuery({
-    queryKey: ['customers-list'],
+    queryKey: ['customers', 'list'],
     queryFn: () => customersApi.getAll({ limit: 100, activo: true }),
   });
 

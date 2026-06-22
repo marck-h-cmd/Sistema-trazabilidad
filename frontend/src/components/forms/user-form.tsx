@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -36,7 +37,7 @@ export function UserForm({ open, onClose, user }: UserFormProps) {
   const queryClient = useQueryClient();
   const isEditing = !!user;
 
-  const { register, control, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm<UserFormData>({
+  const { register, control, handleSubmit, watch, reset, formState: { errors, isSubmitting } } = useForm<UserFormData>({
     resolver: zodResolver(userSchema),
     defaultValues: user ? {
       email: user.email,
@@ -46,6 +47,28 @@ export function UserForm({ open, onClose, user }: UserFormProps) {
       telefono: user.telefono || '',
     } : {},
   });
+
+  useEffect(() => {
+    if (user) {
+      reset({
+        email: user.email,
+        nombre: user.nombre,
+        apellido: user.apellido,
+        rol: user.rol,
+        telefono: user.telefono || '',
+        password: '',
+      });
+    } else {
+      reset({
+        email: '',
+        nombre: '',
+        apellido: '',
+        rol: 'RECEPCION',
+        telefono: '',
+        password: '',
+      });
+    }
+  }, [user, reset]);
 
   const createMutation = useMutation({
     mutationFn: (data: UserFormData) => usersApi.create(data),

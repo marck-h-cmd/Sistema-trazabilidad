@@ -52,7 +52,7 @@ export function LabelTemplateDesigner() {
   });
 
   const { data: products } = useQuery({
-    queryKey: ['products-pt'],
+    queryKey: ['products', 'pt'],
     queryFn: () => productsApi.getByCategory('PRODUCTO_TERMINADO'),
   });
 

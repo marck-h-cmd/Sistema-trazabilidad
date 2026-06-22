@@ -41,7 +41,7 @@ export function WarehouseMap({
 }: WarehouseMapProps) {
   // Cargar ubicaciones del almacén
   const { data: locationsResponse, isLoading, isError } = useQuery({
-    queryKey: ['warehouse-map-locations', warehouseId],
+    queryKey: ['locations', 'map', warehouseId],
     queryFn: () => warehousesApi.getLocations(warehouseId).then((r) => r.data.data),
     enabled: !!warehouseId,
   });

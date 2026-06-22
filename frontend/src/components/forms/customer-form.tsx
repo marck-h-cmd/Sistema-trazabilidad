@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -26,7 +27,7 @@ export function CustomerForm({ open, onClose, customer }: CustomerFormProps) {
   const queryClient = useQueryClient();
   const isEditing = !!customer;
 
-  const { register, control, handleSubmit, setValue, watch, formState: { errors, isSubmitting } } = useForm<CustomerFormData>({
+  const { register, control, handleSubmit, setValue, watch, reset, formState: { errors, isSubmitting } } = useForm<CustomerFormData>({
     resolver: zodResolver(customerSchema),
     defaultValues: customer ? {
       codigo: customer.codigo,
@@ -54,6 +55,38 @@ export function CustomerForm({ open, onClose, customer }: CustomerFormProps) {
       direccionEnvio: '',
     },
   });
+
+  useEffect(() => {
+    if (customer) {
+      reset({
+        codigo: customer.codigo,
+        tipo: customer.tipo,
+        nombre: customer.nombre,
+        nif: customer.nif,
+        direccion: customer.direccion,
+        ciudad: customer.ciudad,
+        pais: customer.pais,
+        nombreContacto: customer.nombreContacto,
+        emailContacto: customer.emailContacto,
+        telefonoContacto: customer.telefonoContacto ?? '',
+        direccionEnvio: customer.direccionEnvio ?? '',
+      });
+    } else {
+      reset({
+        codigo: '',
+        tipo: '',
+        nombre: '',
+        nif: '',
+        direccion: '',
+        ciudad: '',
+        pais: '',
+        nombreContacto: '',
+        emailContacto: '',
+        telefonoContacto: '',
+        direccionEnvio: '',
+      });
+    }
+  }, [customer, reset]);
 
   const createMutation = useMutation({
     mutationFn: (data: CustomerFormData) => customersApi.create(data),

@@ -39,7 +39,8 @@ export function LocationForm({ open, onClose, warehouseId }: LocationFormProps) 
   const createMutation = useMutation({
     mutationFn: (data: LocationFormData) => warehousesApi.createLocation(warehouseId, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['locations', warehouseId] });
+      queryClient.invalidateQueries({ queryKey: ['locations'] });
+      queryClient.invalidateQueries({ queryKey: ['warehouses'] });
       toast({ title: 'Ubicación creada', variant: 'success' });
       onClose();
     },

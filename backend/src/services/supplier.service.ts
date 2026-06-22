@@ -15,7 +15,9 @@ export class SupplierService {
       limit: query.limit,
     });
 
-    const where: Prisma.ProveedorWhereInput = {};
+    const where: Prisma.ProveedorWhereInput = {
+      activo: query.activo !== undefined ? query.activo : true,
+    };
 
     if (query.search) {
       where.OR = [
@@ -23,10 +25,6 @@ export class SupplierService {
         { codigo: { contains: query.search, mode: 'insensitive' } },
         { nif: { contains: query.search, mode: 'insensitive' } },
       ];
-    }
-
-    if (query.activo !== undefined) {
-      where.activo = query.activo;
     }
 
     const [suppliers, total] = await Promise.all([
