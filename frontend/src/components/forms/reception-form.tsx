@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useMutation, useQuery } from '@tanstack/react-query';
@@ -12,19 +12,18 @@ import { BarcodeScanner } from '@/components/scanner/barcode-scanner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Combobox } from '@/components/ui/combobox';
 import { toast } from '@/components/ui/toast';
-import { 
-  Package, 
-  Plus, 
-  Trash2, 
-  Save,
-  Loader2,
-  Camera,
-} from 'lucide-react';
+import { Package, Plus, Trash2, Save, Loader2, Camera } from 'lucide-react';
 import { useScannerStore } from '@/stores/scanner.store';
 import { useRouter } from 'next/navigation';
 
@@ -33,15 +32,19 @@ const receptionSchema = z.object({
   metodoEntrada: z.string().default('MANUAL'),
   numeroAlbaran: z.string().optional(),
   numeroFactura: z.string().optional(),
-  lotes: z.array(z.object({
-    productoId: z.string().min(1, 'Seleccione un producto'),
-    cantidad: z.coerce.number().min(0.01, 'Cantidad mínima 0.01'),
-    unidadMedida: z.string().default('kg'),
-    fechaCaducidad: z.string().optional(),
-    ubicacionId: z.string().optional(),
-    numeroLoteProveedor: z.string().optional(),
-    temperaturaLlegada: z.coerce.number().optional(),
-  })).min(1, 'Agregue al menos un producto'),
+  lotes: z
+    .array(
+      z.object({
+        productoId: z.string().min(1, 'Seleccione un producto'),
+        cantidad: z.coerce.number().min(0.01, 'Cantidad mínima 0.01'),
+        unidadMedida: z.string().default('kg'),
+        fechaCaducidad: z.string().optional(),
+        ubicacionId: z.string().optional(),
+        numeroLoteProveedor: z.string().optional(),
+        temperaturaLlegada: z.coerce.number().optional(),
+      })
+    )
+    .min(1, 'Agregue al menos un producto'),
   observaciones: z.string().optional(),
 });
 
@@ -71,6 +74,7 @@ export function ReceptionForm({ onSuccess }: ReceptionFormProps) {
     handleSubmit,
     control,
     setValue,
+    getValues,
     watch,
     formState: { errors, isSubmitting },
   } = useForm<ReceptionFormData>({
@@ -107,39 +111,128 @@ export function ReceptionForm({ onSuccess }: ReceptionFormProps) {
     createMutation.mutate(data);
   };
 
-  const handleBarcodeScan = (code: string) => {
+  const handleBarcodeScan = async (code: string) => {
     setShowScanner(false);
-    toast({
-      title: 'Código escaneado',
-      description: `Código: ${code}`,
-    });
+
+    // 1. Buscar producto por SKU en la lista local
+    const matchedProduct = products?.data?.data?.find(
+      (p: any) => p.sku?.toUpperCase() === code.toUpperCase()
+    );
+
+    if (matchedProduct) {
+      // Si hay un lote vacío (sin producto seleccionado), usarlo
+      const emptyIndex = fields.findIndex((f, i) => !getValues(`lotes.${i}.productoId`));
+
+      if (emptyIndex >= 0) {
+        setValue(`lotes.${emptyIndex}.productoId`, matchedProduct.id, { shouldValidate: true });
+        setValue(`lotes.${emptyIndex}.unidadMedida`, matchedProduct.unidadMedida, {
+          shouldValidate: true,
+        });
+      } else {
+        // Agregar nuevo lote con el producto escaneado
+        append({
+          productoId: matchedProduct.id,
+          cantidad: 0,
+          unidadMedida: matchedProduct.unidadMedida,
+        });
+      }
+
+      toast({
+        title: 'Producto escaneado',
+        description: `${matchedProduct.nombre} (${matchedProduct.sku})`,
+        variant: 'success',
+      });
+      return;
+    }
+
+    // 2. Buscar proveedor por código
+    const matchedSupplier = suppliers?.data?.data?.find(
+      (s: any) => s.codigo?.toUpperCase() === code.toUpperCase()
+    );
+
+    if (matchedSupplier) {
+      setValue('proveedorId', matchedSupplier.id, { shouldValidate: true });
+      toast({
+        title: 'Proveedor escaneado',
+        description: `${matchedSupplier.nombre} (${matchedSupplier.codigo})`,
+        variant: 'success',
+      });
+      return;
+    }
+
+    // 3. Fallback: usar endpoint de scan del backend
+    try {
+      const response = await receptionsApi.scanBarcode(code);
+      const scanData = response.data?.data;
+
+      if (scanData?.tipo === 'PRODUCTO' && scanData?.producto) {
+        const emptyIndex = fields.findIndex((f, i) => !getValues(`lotes.${i}.productoId`));
+        if (emptyIndex >= 0) {
+          setValue(`lotes.${emptyIndex}.productoId`, scanData.producto.id, {
+            shouldValidate: true,
+          });
+          setValue(`lotes.${emptyIndex}.unidadMedida`, scanData.producto.unidadMedida, {
+            shouldValidate: true,
+          });
+        } else {
+          append({
+            productoId: scanData.producto.id,
+            cantidad: 0,
+            unidadMedida: scanData.producto.unidadMedida,
+          });
+        }
+        toast({
+          title: 'Producto escaneado (API)',
+          description: `${scanData.producto.nombre}`,
+          variant: 'success',
+        });
+      } else if (scanData?.tipo === 'PROVEEDOR' && scanData?.proveedor) {
+        setValue('proveedorId', scanData.proveedor.id, { shouldValidate: true });
+        toast({
+          title: 'Proveedor escaneado (API)',
+          description: `${scanData.proveedor.nombre}`,
+          variant: 'success',
+        });
+      } else {
+        toast({
+          title: 'Código no reconocido',
+          description: `Código: ${code}`,
+          variant: 'warning',
+        });
+      }
+    } catch {
+      toast({
+        title: 'Código no reconocido',
+        description: `No se encontró producto ni proveedor para: ${code}`,
+        variant: 'warning',
+      });
+    }
   };
 
-  const supplierOptions = suppliers?.data?.data?.map((s: any) => ({
-    value: s.id,
-    label: `${s.nombre} (${s.codigo})`,
-  })) || [];
+  const supplierOptions =
+    suppliers?.data?.data?.map((s: any) => ({
+      value: s.id,
+      label: `${s.nombre} (${s.codigo})`,
+    })) || [];
 
-  const productOptions = products?.data?.data?.map((p: any) => ({
-    value: p.id,
-    label: `${p.nombre} (${p.sku})`,
-  })) || [];
+  const productOptions =
+    products?.data?.data?.map((p: any) => ({
+      value: p.id,
+      label: `${p.nombre} (${p.sku})`,
+    })) || [];
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
       {showScanner && (
         <Card className="overflow-hidden border-2 border-primary/30 dark:border-primary/50">
           <CardContent className="p-0">
-            <BarcodeScanner
-              onScan={handleBarcodeScan}
-              onClose={() => setShowScanner(false)}
-            />
+            <BarcodeScanner onScan={handleBarcodeScan} onClose={() => setShowScanner(false)} />
           </CardContent>
         </Card>
       )}
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2 space-y-6">
+        <div className="space-y-6 lg:col-span-2">
           <Card className="dark:border-gray-800 dark:bg-gray-900">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg dark:text-gray-100">
@@ -150,7 +243,9 @@ export function ReceptionForm({ onSuccess }: ReceptionFormProps) {
             <CardContent className="space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="proveedorId" className="dark:text-gray-300">Proveedor *</Label>
+                  <Label htmlFor="proveedorId" className="dark:text-gray-300">
+                    Proveedor *
+                  </Label>
                   <Combobox
                     options={supplierOptions}
                     placeholder="Seleccionar proveedor"
@@ -164,12 +259,16 @@ export function ReceptionForm({ onSuccess }: ReceptionFormProps) {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="numeroAlbaran" className="dark:text-gray-300">Nº Albarán</Label>
+                  <Label htmlFor="numeroAlbaran" className="dark:text-gray-300">
+                    Nº Albarán
+                  </Label>
                   <Input id="numeroAlbaran" placeholder="ALB-001" {...register('numeroAlbaran')} />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="numeroFactura" className="dark:text-gray-300">Nº Factura</Label>
+                  <Label htmlFor="numeroFactura" className="dark:text-gray-300">
+                    Nº Factura
+                  </Label>
                   <Input id="numeroFactura" placeholder="FAC-001" {...register('numeroFactura')} />
                 </div>
               </div>
@@ -194,9 +293,14 @@ export function ReceptionForm({ onSuccess }: ReceptionFormProps) {
             </CardHeader>
             <CardContent className="space-y-4">
               {fields.map((field, index) => (
-                <div key={field.id} className="rounded-lg border p-4 space-y-3 dark:border-gray-700">
+                <div
+                  key={field.id}
+                  className="space-y-3 rounded-lg border p-4 dark:border-gray-700"
+                >
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-semibold dark:text-gray-200">Producto {index + 1}</span>
+                    <span className="text-sm font-semibold dark:text-gray-200">
+                      Producto {index + 1}
+                    </span>
                     {fields.length > 1 && (
                       <Button
                         type="button"
@@ -212,14 +316,26 @@ export function ReceptionForm({ onSuccess }: ReceptionFormProps) {
 
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div className="space-y-2">
-                      <Label className="dark:text-gray-300">Producto *</Label>
-                      <Combobox
-                        options={productOptions}
-                        placeholder="Seleccionar producto"
-                        searchPlaceholder="Buscar producto..."
-                        emptyText="Producto no encontrado"
-                        onChange={(value) => setValue(`lotes.${index}.productoId`, value)}
+                      <Label htmlFor="proveedorId" className="dark:text-gray-300">
+                        Proveedor *
+                      </Label>
+                      <Controller
+                        name="proveedorId"
+                        control={control}
+                        render={({ field }) => (
+                          <Combobox
+                            options={supplierOptions}
+                            placeholder="Seleccionar proveedor"
+                            searchPlaceholder="Buscar proveedor..."
+                            emptyText="Proveedor no encontrado"
+                            value={field.value}
+                            onChange={field.onChange}
+                          />
+                        )}
                       />
+                      {errors.proveedorId && (
+                        <p className="text-xs text-destructive">{errors.proveedorId.message}</p>
+                      )}
                     </div>
 
                     <div className="space-y-2">
@@ -252,26 +368,50 @@ export function ReceptionForm({ onSuccess }: ReceptionFormProps) {
                     </div>
 
                     <div className="space-y-2">
-                      <Label className="dark:text-gray-300">Fecha Caducidad</Label>
-                      <Input type="date" {...register(`lotes.${index}.fechaCaducidad`)} />
+                      <Label className="dark:text-gray-300">Producto *</Label>
+                      <Controller
+                        name={`lotes.${index}.productoId`}
+                        control={control}
+                        render={({ field }) => (
+                          <Combobox
+                            options={productOptions}
+                            placeholder="Seleccionar producto"
+                            searchPlaceholder="Buscar producto..."
+                            emptyText="Producto no encontrado"
+                            value={field.value}
+                            onChange={field.onChange}
+                          />
+                        )}
+                      />
+                      {errors.lotes?.[index]?.productoId && (
+                        <p className="text-xs text-destructive">
+                          {errors.lotes[index]?.productoId?.message}
+                        </p>
+                      )}
                     </div>
 
                     <div className="space-y-2">
                       <Label className="dark:text-gray-300">Lote Proveedor</Label>
-                      <Input placeholder="Lote del proveedor" {...register(`lotes.${index}.numeroLoteProveedor`)} />
+                      <Input
+                        placeholder="Lote del proveedor"
+                        {...register(`lotes.${index}.numeroLoteProveedor`)}
+                      />
                     </div>
 
                     <div className="space-y-2">
                       <Label className="dark:text-gray-300">Temperatura Llegada (°C)</Label>
-                      <Input type="number" step="0.1" placeholder="0.0" {...register(`lotes.${index}.temperaturaLlegada`)} />
+                      <Input
+                        type="number"
+                        step="0.1"
+                        placeholder="0.0"
+                        {...register(`lotes.${index}.temperaturaLlegada`)}
+                      />
                     </div>
                   </div>
                 </div>
               ))}
 
-              {errors.lotes && (
-                <p className="text-sm text-destructive">{errors.lotes.message}</p>
-              )}
+              {errors.lotes && <p className="text-sm text-destructive">{errors.lotes.message}</p>}
             </CardContent>
           </Card>
         </div>
@@ -298,7 +438,7 @@ export function ReceptionForm({ onSuccess }: ReceptionFormProps) {
                 size="lg"
                 disabled={isSubmitting || createMutation.isPending}
               >
-                {(isSubmitting || createMutation.isPending) ? (
+                {isSubmitting || createMutation.isPending ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
                   <Save className="h-4 w-4" />

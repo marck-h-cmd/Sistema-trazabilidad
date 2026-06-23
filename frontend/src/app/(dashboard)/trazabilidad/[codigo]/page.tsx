@@ -18,11 +18,11 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
-import { 
-  GitBranch, 
-  ArrowLeft, 
-  ArrowRight, 
-  MapPin, 
+import {
+  GitBranch,
+  ArrowLeft,
+  ArrowRight,
+  MapPin,
   Clock,
   Download,
   Printer,
@@ -52,7 +52,7 @@ export default function TraceabilityDetailPage() {
       <div className="space-y-6">
         <Skeleton className="h-10 w-64" />
         <div className="grid gap-6 lg:grid-cols-3">
-          <div className="lg:col-span-2 space-y-6">
+          <div className="space-y-6 lg:col-span-2">
             <Skeleton className="h-[200px]" />
             <Skeleton className="h-[400px]" />
           </div>
@@ -73,15 +73,23 @@ export default function TraceabilityDetailPage() {
     );
   }
 
-  const traceData = data.data;
-  const lote = traceData.lote;
+  const traceData = data.data?.data || data.data;
+  const lote = traceData?.lote;
+
+  if (!lote) {
+    return (
+      <EmptyState
+        icon={<GitBranch className="h-10 w-10" />}
+        title="Datos de lote incompletos"
+        description="No se pudieron cargar los datos del lote"
+        action={{ label: 'Reintentar', onClick: () => refetch() }}
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Trazabilidad de Lote"
-        description={`Código: ${lote.codigo}`}
-      >
+      <PageHeader title="Trazabilidad de Lote" description={`Código: ${lote.codigo}`}>
         <div className="flex flex-wrap items-center gap-2">
           <Button variant="outline" size="sm" asChild>
             <Link href="/trazabilidad">
@@ -122,11 +130,15 @@ export default function TraceabilityDetailPage() {
             <div className="text-center">
               <p className="text-xs text-muted-foreground dark:text-gray-500">Cantidad</p>
               <p className="text-xl font-bold dark:text-gray-100">{lote.cantidad}</p>
-              <p className="text-xs text-muted-foreground dark:text-gray-500">{lote.unidadMedida}</p>
+              <p className="text-xs text-muted-foreground dark:text-gray-500">
+                {lote.unidadMedida}
+              </p>
             </div>
             <div className="text-center">
               <p className="text-xs text-muted-foreground dark:text-gray-500">Producción</p>
-              <p className="text-lg font-semibold dark:text-gray-200">{lote.fechaProduccion ? formatDate(lote.fechaProduccion) : 'N/A'}</p>
+              <p className="text-lg font-semibold dark:text-gray-200">
+                {lote.fechaProduccion ? formatDate(lote.fechaProduccion) : 'N/A'}
+              </p>
             </div>
             <div className="text-center">
               <p className="text-xs text-muted-foreground dark:text-gray-500">Caducidad</p>
@@ -142,8 +154,8 @@ export default function TraceabilityDetailPage() {
           <div className="mt-4 flex items-center gap-2 rounded-lg bg-muted/50 px-4 py-2.5 dark:bg-gray-800">
             <MapPin className="h-4 w-4 text-primary" />
             <span className="text-sm dark:text-gray-300">
-              <span className="font-medium">Ubicación actual:</span>{' '}
-              {lote.ubicacionActual.almacen} → {lote.ubicacionActual.codigoCompleto}
+              <span className="font-medium">Ubicación actual:</span> {lote.ubicacionActual.almacen}{' '}
+              → {lote.ubicacionActual.codigoCompleto}
             </span>
           </div>
         )}

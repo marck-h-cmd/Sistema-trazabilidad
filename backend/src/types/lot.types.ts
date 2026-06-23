@@ -45,6 +45,7 @@ export interface CreateLotDTO {
   numeroLoteProveedor?: string;
   observaciones?: string;
   metadatos?: Record<string, any>;
+  recepcionId?: string;
 }
 
 export interface UpdateLotDTO {
