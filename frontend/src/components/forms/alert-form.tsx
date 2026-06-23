@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -44,9 +44,6 @@ export function AlertForm({ onSuccess }: AlertFormProps) {
     register,
     control,
     handleSubmit,
-    control,
-    setValue,
-    watch,
     formState: { errors, isSubmitting },
   } = useForm<AlertFormData>({
     resolver: zodResolver(alertSchema),
