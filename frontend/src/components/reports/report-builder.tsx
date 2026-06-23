@@ -49,12 +49,12 @@ export function ReportBuilder() {
   const [viewMode, setViewMode] = useState<'table' | 'chart'>('table');
 
   const { data: products } = useQuery({
-    queryKey: ['products-list'],
+    queryKey: ['products', 'list'],
     queryFn: () => productsApi.getAll({ limit: 100 }),
   });
 
   const { data: customers } = useQuery({
-    queryKey: ['customers-list'],
+    queryKey: ['customers', 'list'],
     queryFn: () => customersApi.getAll({ limit: 100 }),
   });
 

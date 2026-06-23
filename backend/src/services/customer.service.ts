@@ -16,7 +16,9 @@ export class CustomerService {
       limit: query.limit,
     });
 
-    const where: Prisma.ClienteWhereInput = {};
+    const where: Prisma.ClienteWhereInput = {
+      activo: query.activo !== undefined ? query.activo : true,
+    };
 
     if (query.search) {
       where.OR = [
@@ -28,10 +30,6 @@ export class CustomerService {
 
     if (query.tipo) {
       where.tipo = query.tipo;
-    }
-
-    if (query.activo !== undefined) {
-      where.activo = query.activo;
     }
 
     const [customers, total] = await Promise.all([

@@ -7,13 +7,13 @@ import { useToast } from './use-toast';
 
 export function useWarehouse(warehouseId?: string) {
   const { data: warehouse, isLoading } = useQuery({
-    queryKey: ['warehouse', warehouseId],
+    queryKey: ['warehouses', 'detail', warehouseId],
     queryFn: () => warehousesApi.getById(warehouseId!).then((res) => res.data.data),
     enabled: !!warehouseId,
   });
 
   const { data: locations } = useQuery({
-    queryKey: ['locations', warehouseId],
+    queryKey: ['locations', 'by-warehouse', warehouseId],
     queryFn: () => warehousesApi.getLocations(warehouseId!).then((res) => res.data.data),
     enabled: !!warehouseId,
   });

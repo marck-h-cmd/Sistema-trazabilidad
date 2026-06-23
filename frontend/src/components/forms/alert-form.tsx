@@ -42,6 +42,7 @@ export function AlertForm({ onSuccess }: AlertFormProps) {
 
   const {
     register,
+    control,
     handleSubmit,
     control,
     setValue,

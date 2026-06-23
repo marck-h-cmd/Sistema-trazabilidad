@@ -43,7 +43,7 @@ export default function LineasProduccionConfigPage() {
   });
 
   const { data: products } = useQuery({
-    queryKey: ['products-pt-list'],
+    queryKey: ['products', 'pt-list'],
     queryFn: () => productsApi.getByCategory('PRODUCTO_TERMINADO'),
   });
 

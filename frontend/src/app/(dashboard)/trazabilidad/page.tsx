@@ -53,7 +53,7 @@ export default function TrazabilidadPage() {
   const [fechaHasta, setFechaHasta] = useState<Date | undefined>();
 
   const { data: products } = useQuery({
-    queryKey: ['products-all'],
+    queryKey: ['products', 'all'],
     queryFn: () => productsApi.getAll({ limit: 100, activo: true }),
   });
 

@@ -55,7 +55,7 @@ export function LocationPicker({
 
   // Cargar lista de almacenes
   const { data: warehousesResponse, isLoading: isLoadingWarehouses } = useQuery({
-    queryKey: ['warehouses-picker-list'],
+    queryKey: ['warehouses', 'picker'],
     queryFn: () => warehousesApi.getAll().then((r) => r.data.data),
     enabled: !almacenId, // Solo cargar si no se fuerza un almacén específico
   });
@@ -66,7 +66,7 @@ export function LocationPicker({
 
   // Cargar ubicaciones para el almacén seleccionado
   const { data: locationsResponse, isLoading: isLoadingLocations } = useQuery({
-    queryKey: ['locations-picker-list', selectedAlmacen],
+    queryKey: ['locations', 'picker', selectedAlmacen],
     queryFn: () => warehousesApi.getLocations(selectedAlmacen).then((r) => r.data.data),
     enabled: !!selectedAlmacen, // Solo cargar si hay un almacén seleccionado
   });

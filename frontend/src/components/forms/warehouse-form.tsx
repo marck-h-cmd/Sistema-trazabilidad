@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -33,10 +34,28 @@ export function WarehouseForm({ open, onClose, warehouse }: WarehouseFormProps) 
   const queryClient = useQueryClient();
   const isEditing = !!warehouse;
 
-  const { register, control, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm<WarehouseFormData>({
+  const { register, control, handleSubmit, watch, reset, formState: { errors, isSubmitting } } = useForm<WarehouseFormData>({
     resolver: zodResolver(warehouseSchema),
     defaultValues: warehouse || { tipo: 'PRINCIPAL' },
   });
+
+  useEffect(() => {
+    if (warehouse) {
+      reset({
+        codigo: warehouse.codigo,
+        nombre: warehouse.nombre,
+        direccion: warehouse.direccion,
+        tipo: warehouse.tipo || 'PRINCIPAL',
+      });
+    } else {
+      reset({
+        codigo: '',
+        nombre: '',
+        direccion: '',
+        tipo: 'PRINCIPAL',
+      });
+    }
+  }, [warehouse, reset]);
 
   const createMutation = useMutation({
     mutationFn: (data: WarehouseFormData) => warehousesApi.create(data),
@@ -58,7 +77,11 @@ export function WarehouseForm({ open, onClose, warehouse }: WarehouseFormProps) 
         <DialogHeader><DialogTitle className="dark:text-gray-100">{isEditing ? 'Editar' : 'Nuevo'} Almacén</DialogTitle></DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2"><Label className="dark:text-gray-300">Código *</Label><Input {...register('codigo')} /></div>
+            <div className="space-y-2">
+              <Label className="dark:text-gray-300">Código *</Label>
+              <Input {...register('codigo')} />
+              {errors.codigo && <p className="text-xs text-destructive">{errors.codigo.message}</p>}
+            </div>
             <div className="space-y-2"><Label className="dark:text-gray-300">Tipo</Label>
               <Controller
                 control={control}
@@ -77,8 +100,16 @@ export function WarehouseForm({ open, onClose, warehouse }: WarehouseFormProps) 
               />
             </div>
           </div>
-          <div className="space-y-2"><Label className="dark:text-gray-300">Nombre *</Label><Input {...register('nombre')} /></div>
-          <div className="space-y-2"><Label className="dark:text-gray-300">Dirección *</Label><Input {...register('direccion')} /></div>
+          <div className="space-y-2">
+            <Label className="dark:text-gray-300">Nombre *</Label>
+            <Input {...register('nombre')} />
+            {errors.nombre && <p className="text-xs text-destructive">{errors.nombre.message}</p>}
+          </div>
+          <div className="space-y-2">
+            <Label className="dark:text-gray-300">Dirección *</Label>
+            <Input {...register('direccion')} />
+            {errors.direccion && <p className="text-xs text-destructive">{errors.direccion.message}</p>}
+          </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
             <Button type="submit" disabled={isSubmitting}>{isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}{isEditing ? 'Actualizar' : 'Crear'}</Button>

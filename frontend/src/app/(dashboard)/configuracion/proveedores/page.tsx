@@ -103,14 +103,14 @@ export default function ProveedoresConfigPage() {
   const debouncedSearch = useDebounce(search, 300);
 
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ['suppliers-config', page, debouncedSearch],
+    queryKey: ['suppliers', 'config', page, debouncedSearch],
     queryFn: () => suppliersApi.getAll({ page, limit: 10, search: debouncedSearch }),
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => suppliersApi.delete(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['suppliers-config'] });
+      queryClient.invalidateQueries({ queryKey: ['suppliers'] });
       toast({ title: 'Proveedor desactivado', variant: 'success' });
       setShowDeleteConfirm(false);
     },
@@ -154,7 +154,9 @@ export default function ProveedoresConfigPage() {
         <DataTable columns={columns as any} data={suppliers} page={page} totalPages={pagination?.totalPages || 1} onPageChange={setPage} extraActions={{ onEdit: handleEdit, onDelete: handleDelete }} />
       )}
 
-      <SupplierForm open={showForm} onClose={() => { setShowForm(false); refetch(); }} supplier={selectedSupplier} />
+      {showForm && (
+        <SupplierForm open={showForm} onClose={() => { setShowForm(false); refetch(); }} supplier={selectedSupplier} />
+      )}
       <ConfirmDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm} title="Desactivar" description={`¿Desactivar ${supplierToDelete?.nombre}?`} confirmLabel="Desactivar" variant="destructive" onConfirm={() => supplierToDelete && deleteMutation.mutate(supplierToDelete.id)} isLoading={deleteMutation.isPending} />
     </div>
   );

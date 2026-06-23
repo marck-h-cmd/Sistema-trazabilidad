@@ -17,7 +17,9 @@ export class ProductService {
       limit: query.limit,
     });
 
-    const where: Prisma.ProductoWhereInput = {};
+    const where: Prisma.ProductoWhereInput = {
+      activo: query.activo !== undefined ? query.activo : true,
+    };
 
     if (query.categoria) {
       where.categoria = query.categoria as CategoriaProducto;
@@ -29,10 +31,6 @@ export class ProductService {
         { sku: { contains: query.search, mode: 'insensitive' } },
         { descripcion: { contains: query.search, mode: 'insensitive' } },
       ];
-    }
-
-    if (query.activo !== undefined) {
-      where.activo = query.activo;
     }
 
     const { products, total } = await this.productRepository.findAll({

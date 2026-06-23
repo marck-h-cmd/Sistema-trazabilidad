@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -41,6 +42,7 @@ export function ProductForm({ open, onClose, product }: ProductFormProps) {
 
   const {
     register,
+    control,
     handleSubmit,
     setValue,
     watch,
@@ -69,6 +71,35 @@ export function ProductForm({ open, onClose, product }: ProductFormProps) {
   });
 
   const requiereFrio = watch('requiereCadenaFrio');
+
+  useEffect(() => {
+    console.log("Cargando producto en formulario:", product);
+    if (product) {
+      reset({
+        sku: product.sku,
+        nombre: product.nombre,
+        descripcion: product.descripcion || '',
+        categoria: product.categoria,
+        unidadMedida: product.unidadMedida,
+        vidaUtilDias: product.vidaUtilDias,
+        requiereCadenaFrio: product.requiereCadenaFrio,
+        temperaturaMinima: product.temperaturaMinima || undefined,
+        temperaturaMaxima: product.temperaturaMaxima || undefined,
+      });
+    } else {
+      reset({
+        sku: '',
+        nombre: '',
+        descripcion: '',
+        categoria: 'PRODUCTO_TERMINADO',
+        unidadMedida: 'kg',
+        vidaUtilDias: undefined,
+        requiereCadenaFrio: false,
+        temperaturaMinima: undefined,
+        temperaturaMaxima: undefined,
+      });
+    }
+  }, [product, reset]);
 
   const createMutation = useMutation({
     mutationFn: (data: ProductFormData) => productsApi.create(data),

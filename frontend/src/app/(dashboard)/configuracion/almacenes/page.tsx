@@ -20,7 +20,9 @@ import {
   Trash2,
   MapPin,
   ChevronRight,
+  Eye,
 } from 'lucide-react';
+import Link from 'next/link';
 import { cn } from '@/lib/utils';
 
 export default function AlmacenesConfigPage() {
@@ -33,13 +35,13 @@ export default function AlmacenesConfigPage() {
   const [warehouseToDelete, setWarehouseToDelete] = useState<any>(null);
 
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ['warehouses-config'],
+    queryKey: ['warehouses', 'config'],
     queryFn: () => warehousesApi.getAll({ limit: 100 }),
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => warehousesApi.delete(id),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['warehouses-config'] }); toast({ title: 'Almacén desactivado', variant: 'success' }); },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['warehouses'] }); toast({ title: 'Almacén desactivado', variant: 'success' }); },
   });
 
   const warehouses = data?.data?.data || [];
@@ -76,9 +78,14 @@ export default function AlmacenesConfigPage() {
                   <Button variant="ghost" size="icon-sm" onClick={() => handleDelete(w)} className="text-destructive"><Trash2 className="h-4 w-4" /></Button>
                 </div>
               </CardHeader>
-              <CardContent>
-                <Button variant="outline" size="sm" className="w-full gap-2 dark:border-gray-700" onClick={() => { setSelectedLocationWarehouse(w.id); setShowLocationForm(true); }}>
-                  <MapPin className="h-4 w-4" /> Agregar Ubicación
+              <CardContent className="flex gap-2">
+                <Button variant="outline" size="sm" className="flex-1 gap-1.5 dark:border-gray-700 text-xs" onClick={() => { setSelectedLocationWarehouse(w.id); setShowLocationForm(true); }}>
+                  <MapPin className="h-3.5 w-3.5" /> Agregar Ubicación
+                </Button>
+                <Button variant="outline" size="sm" className="flex-1 gap-1.5 dark:border-gray-700 text-xs text-primary hover:text-primary" asChild>
+                  <Link href={`/almacen/ubicaciones?almacenId=${w.id}`}>
+                    <Eye className="h-3.5 w-3.5" /> Ver Ubicaciones
+                  </Link>
                 </Button>
               </CardContent>
             </Card>
@@ -86,8 +93,12 @@ export default function AlmacenesConfigPage() {
         </div>
       )}
 
-      <WarehouseForm open={showWarehouseForm} onClose={() => { setShowWarehouseForm(false); refetch(); }} warehouse={selectedWarehouse} />
-      <LocationForm open={showLocationForm} onClose={() => { setShowLocationForm(false); refetch(); }} warehouseId={selectedLocationWarehouse} />
+      {showWarehouseForm && (
+        <WarehouseForm open={showWarehouseForm} onClose={() => { setShowWarehouseForm(false); refetch(); }} warehouse={selectedWarehouse} />
+      )}
+      {showLocationForm && (
+        <LocationForm open={showLocationForm} onClose={() => { setShowLocationForm(false); refetch(); }} warehouseId={selectedLocationWarehouse} />
+      )}
       <ConfirmDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm} title="Desactivar" description={`¿Desactivar ${warehouseToDelete?.nombre}?`} confirmLabel="Desactivar" variant="destructive" onConfirm={() => warehouseToDelete && deleteMutation.mutate(warehouseToDelete.id)} isLoading={deleteMutation.isPending} />
     </div>
   );

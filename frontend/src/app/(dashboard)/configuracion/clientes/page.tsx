@@ -84,13 +84,13 @@ export default function ClientesConfigPage() {
   const debouncedSearch = useDebounce(search, 300);
 
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ['customers-config', page, debouncedSearch, tipoFilter],
+    queryKey: ['customers', 'config', page, debouncedSearch, tipoFilter],
     queryFn: () => customersApi.getAll({ page, limit: 10, search: debouncedSearch, tipo: tipoFilter || undefined }),
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => customersApi.delete(id),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['customers-config'] }); toast({ title: 'Cliente desactivado', variant: 'success' }); setShowDeleteConfirm(false); },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['customers'] }); toast({ title: 'Cliente desactivado', variant: 'success' }); setShowDeleteConfirm(false); },
   });
 
   const customers = data?.data?.data || [];
@@ -120,7 +120,9 @@ export default function ClientesConfigPage() {
        isError ? <EmptyState icon={<Store className="h-10 w-10" />} title="Error" action={{ label: 'Reintentar', onClick: () => refetch() }} /> :
        customers.length === 0 ? <EmptyState icon={<Store className="h-10 w-10" />} title="Sin clientes" action={{ label: 'Nuevo', onClick: () => { setSelectedCustomer(null); setShowForm(true); } }} /> :
        <DataTable columns={columns} data={customers} page={page} totalPages={pagination?.totalPages || 1} onPageChange={setPage} extraActions={{ onEdit: handleEdit, onDelete: handleDelete }} />}
-      <CustomerForm open={showForm} onClose={() => { setShowForm(false); refetch(); }} customer={selectedCustomer} />
+      {showForm && (
+        <CustomerForm open={showForm} onClose={() => { setShowForm(false); refetch(); }} customer={selectedCustomer} />
+      )}
       <ConfirmDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm} title="Desactivar" description={`¿Desactivar ${customerToDelete?.nombre}?`} confirmLabel="Desactivar" variant="destructive" onConfirm={() => customerToDelete && deleteMutation.mutate(customerToDelete.id)} isLoading={deleteMutation.isPending} />
     </div>
   );

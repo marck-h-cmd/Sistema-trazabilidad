@@ -60,12 +60,12 @@ export function ReceptionForm({ onSuccess }: ReceptionFormProps) {
   const [showScanner, setShowScanner] = useState(false);
 
   const { data: suppliers } = useQuery({
-    queryKey: ['suppliers-list'],
+    queryKey: ['suppliers', 'list'],
     queryFn: () => suppliersApi.getAll({ limit: 100, activo: true }),
   });
 
   const { data: products } = useQuery({
-    queryKey: ['products-mp'],
+    queryKey: ['products', 'mp'],
     queryFn: () => productsApi.getByCategory('MATERIA_PRIMA'),
   });
 

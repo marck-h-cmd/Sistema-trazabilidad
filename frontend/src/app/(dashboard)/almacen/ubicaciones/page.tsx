@@ -20,19 +20,30 @@ import {
   Package,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useEffect } from 'react';
 
 export default function UbicacionesPage() {
   const [showNewWarehouse, setShowNewWarehouse] = useState(false);
   const [showNewLocation, setShowNewLocation] = useState(false);
   const [selectedWarehouse, setSelectedWarehouse] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const queryAlmacenId = params.get('almacenId');
+      if (queryAlmacenId) {
+        setSelectedWarehouse(queryAlmacenId);
+      }
+    }
+  }, []);
+
   const { data: warehouses, isLoading, refetch } = useQuery({
-    queryKey: ['warehouses-full'],
+    queryKey: ['warehouses', 'full'],
     queryFn: () => warehousesApi.getAll({ limit: 100 }),
   });
 
   const { data: selectedWarehouseData } = useQuery({
-    queryKey: ['warehouse', selectedWarehouse],
+    queryKey: ['warehouses', 'detail', selectedWarehouse],
     queryFn: () => warehousesApi.getById(selectedWarehouse!),
     enabled: !!selectedWarehouse,
   });
@@ -155,12 +166,16 @@ export default function UbicacionesPage() {
       </div>
 
       {/* Modales */}
-      <WarehouseForm open={showNewWarehouse} onClose={() => { setShowNewWarehouse(false); refetch(); }} />
-      <LocationForm
-        open={showNewLocation}
-        onClose={() => { setShowNewLocation(false); refetch(); }}
-        warehouseId={selectedWarehouse || ''}
-      />
+      {showNewWarehouse && (
+        <WarehouseForm open={showNewWarehouse} onClose={() => { setShowNewWarehouse(false); refetch(); }} />
+      )}
+      {showNewLocation && (
+        <LocationForm
+          open={showNewLocation}
+          onClose={() => { setShowNewLocation(false); refetch(); }}
+          warehouseId={selectedWarehouse || ''}
+        />
+      )}
     </div>
   );
 }

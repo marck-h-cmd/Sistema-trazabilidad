@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -25,7 +26,7 @@ export function SupplierForm({ open, onClose, supplier }: SupplierFormProps) {
   const queryClient = useQueryClient();
   const isEditing = !!supplier;
 
-  const { register, handleSubmit, setValue, watch, formState: { errors, isSubmitting } } = useForm<SupplierFormData>({
+  const { register, handleSubmit, setValue, watch, reset, formState: { errors, isSubmitting } } = useForm<SupplierFormData>({
     resolver: zodResolver(supplierSchema),
     defaultValues: supplier ? {
       codigo: supplier.codigo,
@@ -51,6 +52,36 @@ export function SupplierForm({ open, onClose, supplier }: SupplierFormProps) {
       utilizaCodigoBarras: true,
     },
   });
+
+  useEffect(() => {
+    if (supplier) {
+      reset({
+        codigo: supplier.codigo,
+        nombre: supplier.nombre,
+        nif: supplier.nif,
+        direccion: supplier.direccion,
+        ciudad: supplier.ciudad,
+        pais: supplier.pais,
+        nombreContacto: supplier.nombreContacto,
+        emailContacto: supplier.emailContacto,
+        telefonoContacto: supplier.telefonoContacto ?? '',
+        utilizaCodigoBarras: supplier.utilizaCodigoBarras,
+      });
+    } else {
+      reset({
+        codigo: '',
+        nombre: '',
+        nif: '',
+        direccion: '',
+        ciudad: '',
+        pais: '',
+        nombreContacto: '',
+        emailContacto: '',
+        telefonoContacto: '',
+        utilizaCodigoBarras: true,
+      });
+    }
+  }, [supplier, reset]);
 
   const createMutation = useMutation({
     mutationFn: (data: SupplierFormData) => suppliersApi.create(data),
