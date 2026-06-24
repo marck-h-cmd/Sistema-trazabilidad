@@ -1,7 +1,7 @@
 import { MovementRepository } from '@repositories/movement.repository';
 import { LotService } from '@services/lot.service';
 import { ApiError } from '@utils/errors';
-import { appEvents, EVENT_TYPES } from '@events/eventEmitter';
+import { appEvents, EVENT_TYPES } from '@appEvents/eventEmitter';
 import { prisma } from '@config/database';
 import { getPaginationParams, getPaginationMeta } from '@utils/pagination';
 import { getFifoSuggestions, validateFifoOrder } from '@utils/fifo';

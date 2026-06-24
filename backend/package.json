@@ -5,7 +5,7 @@
   "main": "dist/server.js",
   "scripts": {
     "dev": "ts-node-dev -r tsconfig-paths/register --respawn --transpile-only src/server.ts",
-    "build": "tsc",
+    "build": "tsc && tsc-alias -p tsconfig.json && node scripts/fix-build.js",
     "start": "node dist/server.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
@@ -34,7 +34,6 @@
     "helmet": "^7.1.0",
     "ioredis": "^5.3.2",
     "jsonwebtoken": "^9.0.2",
-    "module-alias": "^2.2.3",
     "morgan": "^1.10.0",
     "multer": "^1.4.5-lts.1",
     "node-cron": "^3.0.3",
@@ -47,20 +46,6 @@
     "winston": "^3.11.0",
     "winston-daily-rotate-file": "^5.0.0",
     "zod": "^3.22.4"
-  },
-  "_moduleAliases": {
-    "@config": "dist/config",
-    "@controllers": "dist/controllers",
-    "@services": "dist/services",
-    "@routes": "dist/routes",
-    "@middleware": "dist/middleware",
-    "@utils": "dist/utils",
-    "@customTypes": "dist/types",
-    "@repositories": "dist/repositories",
-    "@queues": "dist/queues",
-    "@events": "dist/events",
-    "@jobs": "dist/jobs",
-    "@websocket": "dist/websocket"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"
@@ -91,6 +76,7 @@
     "ts-jest": "^29.1.2",
     "ts-node": "^10.9.2",
     "ts-node-dev": "^2.0.0",
+    "tsc-alias": "^1.8.17",
     "tsconfig-paths": "^4.2.0",
     "typescript": "^5.3.3"
   }

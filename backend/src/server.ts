@@ -1,23 +1,3 @@
-import * as path from 'path';
-import * as moduleAlias from 'module-alias';
-
-// Register module aliases with absolute paths
-const backendRoot = path.resolve(__dirname, '..');
-moduleAlias.addAliases({
-  '@config': path.join(backendRoot, 'dist/config'),
-  '@controllers': path.join(backendRoot, 'dist/controllers'),
-  '@services': path.join(backendRoot, 'dist/services'),
-  '@routes': path.join(backendRoot, 'dist/routes'),
-  '@middleware': path.join(backendRoot, 'dist/middleware'),
-  '@utils': path.join(backendRoot, 'dist/utils'),
-  '@customTypes': path.join(backendRoot, 'dist/types'),
-  '@repositories': path.join(backendRoot, 'dist/repositories'),
-  '@queues': path.join(backendRoot, 'dist/queues'),
-  '@events': path.join(backendRoot, 'dist/events'),
-  '@jobs': path.join(backendRoot, 'dist/jobs'),
-  '@websocket': path.join(backendRoot, 'dist/websocket')
-});
-
 import app from './app';
 import { config } from '@config/app';
 import { logger } from '@utils/logger';

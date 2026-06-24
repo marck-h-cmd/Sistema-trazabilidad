@@ -1,5 +1,5 @@
 import { Socket, Server } from 'socket.io';
-import { appEvents, EVENT_TYPES } from '@events/eventEmitter';
+import { appEvents, EVENT_TYPES } from '@appEvents/eventEmitter';
 import { logger } from '@utils/logger';
 import { prisma } from '@config/database';
 

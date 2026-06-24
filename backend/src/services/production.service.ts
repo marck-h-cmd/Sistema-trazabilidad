@@ -2,7 +2,7 @@ import { ProductionRepository } from '@repositories/production.repository';
 import { LotService } from '@services/lot.service';
 import { ApiError } from '@utils/errors';
 import { generateLotCode } from '@utils/lotGenerator';
-import { appEvents, EVENT_TYPES } from '@events/eventEmitter';
+import { appEvents, EVENT_TYPES } from '@appEvents/eventEmitter';
 import { prisma } from '@config/database';
 import { getPaginationParams, getPaginationMeta } from '@utils/pagination';
 import { calculateExpiryDateFromNow } from '@utils/dateUtils';
