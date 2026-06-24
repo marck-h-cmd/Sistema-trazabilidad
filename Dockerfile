@@ -49,6 +49,9 @@ COPY --from=builder /app/frontend/public ./frontend/public
 COPY --from=builder /app/frontend/.next/standalone ./
 COPY --from=builder /app/frontend/.next/static ./.next/static
 
+# Generate Prisma Client in runtime stage (matches platform
+RUN cd backend && npx prisma generate
+
 RUN addgroup --system --gid 1001 appgroup \
     && adduser --system --uid 1001 appuser \
     && mkdir -p /app/uploads /app/logs /app/backend/logs /app/backend/uploads \
