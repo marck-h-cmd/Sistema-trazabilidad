@@ -6,9 +6,9 @@ RUN apk add --no-cache libc6-compat
 
 COPY package*.json ./
 # Instalar solo producción (más rápido)
-RUN npm ci --only=production
+RUN npm install --omit=dev
 
-# ─── Etapa 2: Build ───────────────────────────────────────────────────────────
+# ─── Etapa 2: Build ────────────────────────────────────────────────────────────
 FROM node:20-alpine AS builder
 WORKDIR /app
 
@@ -16,7 +16,7 @@ RUN apk add --no-cache libc6-compat
 
 COPY package*.json ./
 # Instalar todas las deps (dev incluidas) para build
-RUN npm ci
+RUN npm install
 
 COPY . .
 
