@@ -36,7 +36,13 @@ ARG SERVICE=backend
 ENV SERVICE=${SERVICE}
 ENV NODE_ENV=production
 
-COPY --from=builder /app/node_modules ./node_modules
+# Install production dependencies
+COPY package.json package-lock.json turbo.json ./
+COPY backend/package.json backend/
+COPY frontend/package.json frontend/
+RUN npm ci --omit=dev
+
+# Copy built artifacts
 COPY --from=builder /app/backend/dist ./backend/dist
 COPY --from=builder /app/backend/prisma ./backend/prisma
 COPY --from=builder /app/frontend/public ./frontend/public
