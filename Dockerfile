@@ -51,8 +51,8 @@ COPY --from=builder /app/frontend/.next/static ./.next/static
 
 RUN addgroup --system --gid 1001 appgroup \
     && adduser --system --uid 1001 appuser \
-    && mkdir -p /app/uploads /app/logs \
-    && chown -R appuser:appgroup /app/uploads /app/logs
+    && mkdir -p /app/uploads /app/logs /app/backend/logs /app/backend/uploads \
+    && chown -R appuser:appgroup /app/uploads /app/logs /app/backend/logs /app/backend/uploads
 
 USER appuser
 EXPOSE 3000 3001
