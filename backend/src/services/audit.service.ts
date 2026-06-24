@@ -1,6 +1,6 @@
 import { prisma } from '@config/database';
 import { getPaginationParams, getPaginationMeta } from '@utils/pagination';
-import { appEvents, EVENT_TYPES } from '@events/eventEmitter';
+import { appEvents, EVENT_TYPES } from '@appEvents/eventEmitter';
 
 export class AuditService {
   async logAction(data: {

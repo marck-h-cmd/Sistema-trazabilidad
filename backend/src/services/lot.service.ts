@@ -3,7 +3,7 @@ import { ApiError } from '@utils/errors';
 import { CreateLotDTO, UpdateLotDTO, LotQueryParams } from '@customTypes/lot.types';
 import { getPaginationParams, getPaginationMeta } from '@utils/pagination';
 import { generateLotCode } from '@utils/lotGenerator';
-import { appEvents, EVENT_TYPES } from '@events/eventEmitter';
+import { appEvents, EVENT_TYPES } from '@appEvents/eventEmitter';
 import { Prisma, EstadoLote } from '@prisma/client';
 import { calculateExpiryDateFromNow } from '@utils/dateUtils';
 
