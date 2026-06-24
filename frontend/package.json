@@ -40,7 +40,7 @@
     "bwip-js": "^4.0.1",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.0",
-    "cmdk": "^0.2.1",
+    "cmdk": "^1.1.1",
     "date-fns": "^3.3.1",
     "html5-qrcode": "^2.3.8",
     "lucide-react": "^0.309.0",
