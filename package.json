@@ -33,7 +33,7 @@
     "setup": "npm install && npm run db:generate && npm run db:push && npm run db:seed"
   },
   "devDependencies": {
-    "turbo": "^1.13.0",
+    "turbo": "^2.9.18",
     "prettier": "^3.2.4",
     "prettier-plugin-tailwindcss": "^0.5.11"
   },
