@@ -1,4 +1,4 @@
-import { LabelTemplate } from './product.types';
+
 
 export interface BarcodeConfig {
   type: 'code128' | 'ean13' | 'ean8' | 'upc' | 'qr';
