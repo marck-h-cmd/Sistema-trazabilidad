@@ -26,6 +26,7 @@ import {
   Beaker,
 } from 'lucide-react';
 import { formatDate, formatDateTime, formatNumber } from '@/lib/formatters';
+import { exportProductionsToPDF } from '@/lib/pdf-utils';
 import { cn } from '@/lib/utils';
 
 const columns = [
@@ -171,9 +172,15 @@ export default function ProduccionPage() {
                 <RefreshCw className="h-4 w-4" />
               </Button>
             </div>
-            <Button variant="outline" size="sm" className="gap-2 dark:border-gray-700">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2 dark:border-gray-700"
+              onClick={() => exportProductionsToPDF(productions)}
+              disabled={productions.length === 0}
+            >
               <Download className="h-4 w-4" />
-              Exportar
+              Exportar PDF
             </Button>
           </div>
         </CardContent>

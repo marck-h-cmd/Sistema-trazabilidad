@@ -7,6 +7,7 @@
 ## 1. Descripción General
 
 **Sistema de Trazabilidad Alimentaria** para panadería industrial.
+
 - Cumple con Reglamento Europeo 178/2002, compatible con APPCC, ISO 22000, IFS y BRC.
 - Permite trazabilidad completa desde materias primas hasta cliente final.
 - Gestiona lotes, recepciones, producción, almacén, expediciones, alertas y reportes.
@@ -15,28 +16,28 @@
 
 ## 2. Stack Tecnológico
 
-| Capa | Tecnología | Versión |
-|------|-----------|---------|
-| **Frontend** | Next.js | 14 (App Router) |
-| | TypeScript | 5.3 |
-| | Tailwind CSS | 3.4 |
-| | shadcn/ui | Último |
-| | Zustand | 4.4 |
-| | React Query (TanStack) | 5.17 |
-| | Axios | 1.6 |
-| | Socket.io-client | 4.8 |
-| **Backend** | Node.js | 20 |
-| | Express | 4.18 |
-| | TypeScript | 5.3 |
-| | Prisma ORM | 5.10 |
-| | JWT (jsonwebtoken) | 9.0 |
-| | Winston | 3.11 |
-| | Bull (colas) | 4.12 |
-| | Socket.io | 4.7 |
-| **Base de Datos** | PostgreSQL | 16 |
-| **Cache/Colas** | Redis | 7 |
-| **Monorepo** | Turbo | 1.13 |
-| **DevOps** | Docker, Docker Compose |
+| Capa              | Tecnología             | Versión         |
+| ----------------- | ---------------------- | --------------- |
+| **Frontend**      | Next.js                | 14 (App Router) |
+|                   | TypeScript             | 5.3             |
+|                   | Tailwind CSS           | 3.4             |
+|                   | shadcn/ui              | Último          |
+|                   | Zustand                | 4.4             |
+|                   | React Query (TanStack) | 5.17            |
+|                   | Axios                  | 1.6             |
+|                   | Socket.io-client       | 4.8             |
+| **Backend**       | Node.js                | 20              |
+|                   | Express                | 4.18            |
+|                   | TypeScript             | 5.3             |
+|                   | Prisma ORM             | 5.10            |
+|                   | JWT (jsonwebtoken)     | 9.0             |
+|                   | Winston                | 3.11            |
+|                   | Bull (colas)           | 4.12            |
+|                   | Socket.io              | 4.7             |
+| **Base de Datos** | PostgreSQL             | 16              |
+| **Cache/Colas**   | Redis                  | 7               |
+| **Monorepo**      | Turbo                  | 1.13            |
+| **DevOps**        | Docker, Docker Compose |
 
 ---
 
@@ -103,6 +104,7 @@ trazabilidad-alimentaria/
 El archivo `.env` ya existe configurado para desarrollo local. Los valores sensibles (AWS, SMTP) están expuestos — **NO subir a producción sin rotarlos**.
 
 **Claves importantes:**
+
 - `DATABASE_URL`: Conexión PostgreSQL
 - `JWT_SECRET` / `JWT_REFRESH_SECRET`: Secrets para tokens
 - `REDIS_URL`: Conexión Redis
@@ -120,6 +122,7 @@ El archivo `.env` ya existe configurado para desarrollo local. Los valores sensi
 **Client target:** `native`, `linux-musl-openssl-3.0.x`
 
 ### Entidades principales:
+
 - **usuarios** (con roles: ADMINISTRADOR, CALIDAD, RECEPCION, PRODUCCION, ALMACEN, DESPACHO, CLIENTE, AUTORIDAD)
 - **sesiones** (gestión de tokens de refresco)
 - **productos** (materia prima, producto terminado, envase, semielaborado)
@@ -138,18 +141,20 @@ El archivo `.env` ya existe configurado para desarrollo local. Los valores sensi
 - **registros_auditoria** (auditoría completa)
 
 ### Códigos de lote:
+
 Formato: `L + fecha(YYMMDD) + línea + correlativo`  
 Ejemplo: `L260625L301`
 
 ### Credenciales de prueba (seed):
-| Rol | Email | Contraseña |
-|-----|-------|------------|
-| Admin | admin@panaderia.com | password123 |
-| Calidad | calidad@panaderia.com | password123 |
-| Recepción | recepcion@panaderia.com | password123 |
+
+| Rol        | Email                    | Contraseña  | 1   |
+| ---------- | ------------------------ | ----------- | --- |
+| Admin      | admin@panaderia.com      | password123 |
+| Calidad    | calidad@panaderia.com    | password123 |
+| Recepción  | recepcion@panaderia.com  | password123 |
 | Producción | produccion@panaderia.com | password123 |
-| Almacén | almacen@panaderia.com | password123 |
-| Despacho | despacho@panaderia.com | password123 |
+| Almacén    | almacen@panaderia.com    | password123 |
+| Despacho   | despacho@panaderia.com   | password123 |
 
 ---
 
@@ -159,6 +164,7 @@ Ejemplo: `L260625L301`
 **Health check:** `GET http://localhost:3001/health`
 
 ### Rutas disponibles (backend/src/routes/):
+
 - `auth.routes.ts` — Login, refresh, logout, forgot/reset password
 - `user.routes.ts` — CRUD usuarios
 - `product.routes.ts` — Productos
@@ -178,6 +184,7 @@ Ejemplo: `L260625L301`
 - `dashboard.routes.ts` — KPIs y dashboard
 
 ### Middlewares clave:
+
 - `auth.middleware` — Validación JWT
 - `role.middleware` — Control por roles
 - `rateLimiter` — Límite de peticiones
@@ -194,6 +201,7 @@ Ejemplo: `L260625L301`
 **`docker-compose.yml` → TIENE PROBLEMAS** (no usar hasta corregir)
 
 ### docker-compose.dev.yml (DESARROLLO):
+
 ```bash
 # Levantar entorno de desarrollo
 docker compose -f docker-compose.dev.yml up -d --build
@@ -209,19 +217,23 @@ docker compose -f docker-compose.dev.yml exec backend npx prisma studio
 ```
 
 Servicios:
+
 - `postgres:16-alpine` → puerto 5432
 - `redis:7-alpine` → puerto 6379 (sin password en dev)
 - `backend` → puerto 3001 (hot-reload con ts-node-dev)
 - `frontend` → puerto 3000 (hot-reload Next.js)
 
 **Volumes de desarrollo:**
+
 - `./backend/src:/app/src` (código backend sincronizado)
 - `./backend/prisma:/app/prisma`
 - `./frontend/src:/app/src` (código frontend sincronizado)
 - `./frontend/public:/app/public`
 
 ### docker-compose.yml (PRODUCCIÓN) — CORREGIDO:
+
 Antes tenía problemas conocidos que ya fueron solucionados:
+
 1. ✅ **Variables con valores por defecto seguros:** Todas las variables opcionales ahora tienen defaults (ej. `JWT_SECRET`, `SMTP_HOST`, `AWS_*`).
 2. ✅ **Script init-db.sql eliminado:** Se quitó la referencia a `./scripts/init-db.sql` que no existía.
 3. ✅ **Frontend standalone verificado:** El `next.config.js` sí tiene `output: 'standalone'`.
@@ -234,6 +246,7 @@ Antes tenía problemas conocidos que ya fueron solucionados:
 ## 8. Comandos Útiles
 
 ### Desarrollo local (sin Docker):
+
 ```bash
 npm install                    # Instalar dependencias root
 npm run dev                    # Iniciar frontend + backend con Turbo
@@ -246,6 +259,7 @@ npm run test                   # Ejecutar tests
 ```
 
 ### Base de datos (Prisma):
+
 ```bash
 npm run db:generate            # Generar Prisma Client
 npm run db:push                # Sincronizar schema con BD
@@ -255,6 +269,7 @@ npm run db:studio              # Abrir Prisma Studio
 ```
 
 ### Docker:
+
 ```bash
 # Desarrollo
 docker compose -f docker-compose.dev.yml up -d --build
@@ -269,6 +284,7 @@ docker compose -f docker-compose.dev.yml exec backend sh
 ## 9. Convenciones de Código
 
 ### Backend:
+
 - **Arquitectura:** MVC con Services (Controller → Service → Prisma)
 - **Imports:** Usar path aliases definidos en `tsconfig.json`:
   - `@config/*`, `@controllers/*`, `@services/*`, `@routes/*`, `@middleware/*`, `@utils/*`, `@customTypes/*`, `@repositories/*`, `@queues/*`, `@events/*`, `@jobs/*`, `@websocket/*`
@@ -278,6 +294,7 @@ docker compose -f docker-compose.dev.yml exec backend sh
 - **Base de datos:** Usar siempre el cliente `prisma` importado de `@config/database`.
 
 ### Frontend:
+
 - **App Router:** Next.js 14 con App Router (`frontend/src/app/`)
 - **Estado global:** Zustand en `frontend/src/stores/`
 - **Fetch de datos:** React Query (TanStack) en hooks
@@ -290,14 +307,14 @@ docker compose -f docker-compose.dev.yml exec backend sh
 
 ## 10. Problemas Conocidos y Soluciones
 
-| Problema | Solución |
-|----------|----------|
-| `docker-compose.yml` de producción falla | Usar siempre `docker-compose.dev.yml` para desarrollo |
-| Tabla `usuarios` no existe al iniciar | Ejecutar `npx prisma db push` y `npx prisma db seed` dentro del contenedor backend |
+| Problema                                 | Solución                                                                                           |
+| ---------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `docker-compose.yml` de producción falla | Usar siempre `docker-compose.dev.yml` para desarrollo                                              |
+| Tabla `usuarios` no existe al iniciar    | Ejecutar `npx prisma db push` y `npx prisma db seed` dentro del contenedor backend                 |
 | Frontend no conecta al backend en Docker | Verificar que `NEXT_PUBLIC_API_URL` en `docker-compose.dev.yml` sea `http://localhost:3001/api/v1` |
-| `version: '3.8'` obsoleto en Docker | Advertencia inofensiva, se puede eliminar la línea si se desea |
-| Healthcheck de producción usa `wget` | En `node:20-alpine` no viene `wget`, usar `curl` o instalarlo |
-| Seed no funcionaba con `prisma db seed` | Se agregó `"prisma": { "seed": "ts-node prisma/seed.ts" }` a `backend/package.json` |
+| `version: '3.8'` obsoleto en Docker      | Advertencia inofensiva, se puede eliminar la línea si se desea                                     |
+| Healthcheck de producción usa `wget`     | En `node:20-alpine` no viene `wget`, usar `curl` o instalarlo                                      |
+| Seed no funcionaba con `prisma db seed`  | Se agregó `"prisma": { "seed": "ts-node prisma/seed.ts" }` a `backend/package.json`                |
 
 ---
 
@@ -328,5 +345,5 @@ docker compose -f docker-compose.dev.yml exec backend sh
 
 ---
 
-*Última actualización: 2026-06-20*
-*Mantenido por: Agente IA (OpenCode)*
+_Última actualización: 2026-06-20_
+_Mantenido por: Agente IA (OpenCode)_

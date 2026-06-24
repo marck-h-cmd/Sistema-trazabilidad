@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -27,14 +28,50 @@ interface LocationFormProps {
   open: boolean;
   onClose: () => void;
   warehouseId: string;
+  warehouseName?: string;
+  location?: any;
 }
 
-export function LocationForm({ open, onClose, warehouseId }: LocationFormProps) {
+export function LocationForm({ open, onClose, warehouseId, warehouseName, location }: LocationFormProps) {
   const queryClient = useQueryClient();
+  const isEditing = !!location;
 
-  const { register, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm<LocationFormData>({
+  const { register, handleSubmit, watch, reset, formState: { errors, isSubmitting } } = useForm<LocationFormData>({
     resolver: zodResolver(locationSchema),
+    defaultValues: {
+      zona: '',
+      pasillo: '',
+      estanteria: '',
+      nivel: '',
+      codigoBarras: '',
+      capacidadMaxima: undefined,
+    },
   });
+
+  // Resetear/precargar formulario al abrir
+  useEffect(() => {
+    if (open) {
+      if (location) {
+        reset({
+          zona: location.zona || '',
+          pasillo: location.pasillo || '',
+          estanteria: location.estanteria || '',
+          nivel: location.nivel || '',
+          codigoBarras: location.codigoBarras || '',
+          capacidadMaxima: location.capacidadMaxima || undefined,
+        });
+      } else {
+        reset({
+          zona: '',
+          pasillo: '',
+          estanteria: '',
+          nivel: '',
+          codigoBarras: '',
+          capacidadMaxima: undefined,
+        });
+      }
+    }
+  }, [open, location, reset]);
 
   const createMutation = useMutation({
     mutationFn: (data: LocationFormData) => warehousesApi.createLocation(warehouseId, data),
@@ -44,17 +81,57 @@ export function LocationForm({ open, onClose, warehouseId }: LocationFormProps) 
       toast({ title: 'Ubicación creada', variant: 'success' });
       onClose();
     },
-    onError: (e: any) => toast({ title: 'Error', description: e.response?.data?.error?.message, variant: 'destructive' }),
+    onError: (e: any) => {
+      const message = e.response?.data?.error?.message || 'No se pudo crear la ubicación';
+      toast({
+        title: 'Error',
+        description: message.includes('Ya existe')
+          ? `${message}. Pruebe con otros valores de zona, pasillo, estantería o nivel.`
+          : message,
+        variant: 'destructive',
+      });
+    },
   });
 
-  const onSubmit = (data: LocationFormData) => createMutation.mutate(data);
+  const updateMutation = useMutation({
+    mutationFn: (data: LocationFormData) =>
+      warehousesApi.updateLocation(warehouseId, location.id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['locations'] });
+      queryClient.invalidateQueries({ queryKey: ['warehouses'] });
+      toast({ title: 'Ubicación actualizada', variant: 'success' });
+      onClose();
+    },
+    onError: (e: any) => {
+      const message = e.response?.data?.error?.message || 'No se pudo actualizar la ubicación';
+      toast({
+        title: 'Error',
+        description: message.includes('Ya existe')
+          ? `${message}. Pruebe con otros valores de zona, pasillo, estantería o nivel.`
+          : message,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const onSubmit = (data: LocationFormData) =>
+    isEditing ? updateMutation.mutate(data) : createMutation.mutate(data);
 
   const previewCode = `ZONA-${watch('zona') || '?'}-PASILLO-${watch('pasillo') || '?'}-ESTANTERIA-${watch('estanteria') || '?'}-NIVEL-${watch('nivel') || '?'}`;
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md dark:border-gray-800 dark:bg-gray-900">
-        <DialogHeader><DialogTitle className="dark:text-gray-100">Nueva Ubicación</DialogTitle></DialogHeader>
+        <DialogHeader>
+          <DialogTitle className="dark:text-gray-100">
+            {isEditing ? 'Editar Ubicación' : 'Nueva Ubicación'}
+          </DialogTitle>
+          {warehouseName && (
+            <p className="text-xs text-muted-foreground dark:text-gray-400">
+              Almacén: {warehouseName}
+            </p>
+          )}
+        </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2"><Label className="dark:text-gray-300">Zona *</Label><Input placeholder="A" maxLength={1} {...register('zona')} /></div>
@@ -72,7 +149,10 @@ export function LocationForm({ open, onClose, warehouseId }: LocationFormProps) 
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
-            <Button type="submit" disabled={isSubmitting}>{isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}Crear</Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+              {isEditing ? 'Actualizar' : 'Crear'}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

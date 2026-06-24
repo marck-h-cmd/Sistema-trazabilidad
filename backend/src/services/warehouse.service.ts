@@ -114,6 +114,64 @@ export class WarehouseService {
     });
   }
 
+  async updateLocation(
+    id: string,
+    data: Partial<{
+      zona: string;
+      pasillo: string;
+      estanteria: string;
+      nivel: string;
+      codigoBarras: string;
+      capacidadMaxima: number;
+    }>
+  ) {
+    const location = await prisma.ubicacion.findUnique({ where: { id } });
+
+    if (!location) {
+      throw ApiError.notFound('Ubicación no encontrada');
+    }
+
+    const zona = data.zona ?? location.zona;
+    const pasillo = data.pasillo ?? location.pasillo;
+    const estanteria = data.estanteria ?? location.estanteria;
+    const nivel = data.nivel ?? location.nivel;
+
+    const codigoCompleto = `ZONA-${zona}-PASILLO-${pasillo}-ESTANTERIA-${estanteria}-NIVEL-${nivel}`;
+
+    if (codigoCompleto !== location.codigoCompleto) {
+      const existing = await prisma.ubicacion.findUnique({ where: { codigoCompleto } });
+      if (existing) {
+        throw ApiError.conflict('Ya existe una ubicación con ese código');
+      }
+    }
+
+    return prisma.ubicacion.update({
+      where: { id },
+      data: {
+        zona,
+        pasillo,
+        estanteria,
+        nivel,
+        codigoBarras: data.codigoBarras,
+        codigoCompleto,
+        capacidadMaxima: data.capacidadMaxima,
+      },
+    });
+  }
+
+  async deleteLocation(id: string) {
+    const location = await prisma.ubicacion.findUnique({ where: { id } });
+
+    if (!location) {
+      throw ApiError.notFound('Ubicación no encontrada');
+    }
+
+    return prisma.ubicacion.update({
+      where: { id },
+      data: { activo: false },
+    });
+  }
+
   async getLocations(almacenId: string) {
     await this.findById(almacenId);
 

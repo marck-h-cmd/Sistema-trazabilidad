@@ -44,7 +44,6 @@ export function AlertForm({ onSuccess }: AlertFormProps) {
     register,
     control,
     handleSubmit,
-    control,
     setValue,
     watch,
     formState: { errors, isSubmitting },

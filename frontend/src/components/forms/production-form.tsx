@@ -7,9 +7,8 @@ import { z } from 'zod';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { productionsApi } from '@/lib/api/productions.api';
 import { productsApi } from '@/lib/api/products.api';
-import { inventoryApi } from '@/lib/api/inventory.api';
+import { lotsApi } from '@/lib/api/lots.api';
 import api from '@/lib/axios';
-import { BarcodeScanner } from '@/components/scanner/barcode-scanner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -24,8 +23,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Combobox } from '@/components/ui/combobox';
 import { toast } from '@/components/ui/toast';
-import { Factory, Plus, Trash2, Save, Loader2, Camera, Beaker } from 'lucide-react';
+import { Factory, Plus, Trash2, Save, Loader2, Beaker, Scale, Boxes } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { formatDate } from '@/lib/formatters';
 
 const productionSchema = z.object({
   lineaProduccionId: z.string().min(1, 'Seleccione una línea'),
@@ -55,7 +55,6 @@ interface ProductionFormProps {
 
 export function ProductionForm({ onSuccess }: ProductionFormProps) {
   const router = useRouter();
-  const [showScanner, setShowScanner] = useState(false);
 
   const { data: lines } = useQuery({
     queryKey: ['production-lines'],
@@ -65,6 +64,11 @@ export function ProductionForm({ onSuccess }: ProductionFormProps) {
   const { data: products } = useQuery({
     queryKey: ['products-pt'],
     queryFn: () => productsApi.getByCategory('PRODUCTO_TERMINADO'),
+  });
+
+  const { data: availableLots } = useQuery({
+    queryKey: ['lots-available'],
+    queryFn: () => lotsApi.getAll({ disponible: true, limit: 1000 }).then((r) => r.data.data),
   });
 
   const {
@@ -105,6 +109,20 @@ export function ProductionForm({ onSuccess }: ProductionFormProps) {
     createMutation.mutate(data);
   };
 
+  const productOptions =
+    products?.data?.data?.map((p: any) => ({
+      value: p.id,
+      label: `${p.nombre} (${p.sku})`,
+    })) || [];
+
+  const lotOptions =
+    availableLots?.map((l: any) => ({
+      value: l.id,
+      label: `${l.codigo} — ${l.producto?.nombre || 'Producto'} — ${l.cantidad} ${l.unidadMedida} disponibles — ${l.ubicacion?.codigoCompleto || 'Sin ubicación'}`,
+    })) || [];
+
+  const selectedLots = watch('materiasPrimas')?.map((mp: any) => mp.loteId).filter(Boolean) || [];
+
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
       <div className="grid gap-6 lg:grid-cols-3">
@@ -142,15 +160,19 @@ export function ProductionForm({ onSuccess }: ProductionFormProps) {
 
                 <div className="space-y-2">
                   <Label className="dark:text-gray-300">Producto a Producir *</Label>
-                  <Combobox
-                    options={
-                      products?.data?.data?.map((p: any) => ({
-                        value: p.id,
-                        label: `${p.nombre} (${p.sku})`,
-                      })) || []
-                    }
-                    placeholder="Seleccionar producto"
-                    onChange={(v) => setValue('productoId', v)}
+                  <Controller
+                    control={control}
+                    name="productoId"
+                    render={({ field }) => (
+                      <Combobox
+                        options={productOptions}
+                        value={field.value}
+                        placeholder="Seleccionar producto"
+                        searchPlaceholder="Buscar producto..."
+                        emptyText="Producto no encontrado"
+                        onChange={(v) => setValue('productoId', v, { shouldValidate: true })}
+                      />
+                    )}
                   />
                 </div>
               </div>
@@ -174,6 +196,13 @@ export function ProductionForm({ onSuccess }: ProductionFormProps) {
                   <Input type="number" step="0.1" placeholder="65" {...register('humedad')} />
                 </div>
               </div>
+
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div className="space-y-2">
+                  <Label className="dark:text-gray-300">Tamaño Lote</Label>
+                  <Input type="number" step="0.01" placeholder="Ej: 50" {...register('tamanoLote')} />
+                </div>
+              </div>
             </CardContent>
           </Card>
 
@@ -193,40 +222,74 @@ export function ProductionForm({ onSuccess }: ProductionFormProps) {
               </Button>
             </CardHeader>
             <CardContent className="space-y-4">
-              {fields.map((field, index) => (
-                <div
-                  key={field.id}
-                  className="flex items-end gap-3 rounded-lg border p-3 dark:border-gray-700"
-                >
-                  <div className="flex-1 space-y-2">
-                    <Label className="dark:text-gray-300">Lote MP *</Label>
-                    <Input
-                      placeholder="Código de lote o escanear"
-                      {...register(`materiasPrimas.${index}.loteId`)}
-                    />
+              {fields.map((field, index) => {
+                const selectedLotId = watch(`materiasPrimas.${index}.loteId`);
+                const selectedLot = availableLots?.find((l: any) => l.id === selectedLotId);
+
+                return (
+                  <div
+                    key={field.id}
+                    className="rounded-lg border p-3 dark:border-gray-700"
+                  >
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch">
+                      <div className="flex-1 space-y-2">
+                        <Label className="dark:text-gray-300">Lote MP *</Label>
+                        <Controller
+                          control={control}
+                          name={`materiasPrimas.${index}.loteId`}
+                          render={({ field }) => (
+                            <Combobox
+                              options={lotOptions.filter(
+                                (opt: { value: string; label: string }) =>
+                                  opt.value === field.value || !selectedLots.includes(opt.value)
+                              )}
+                              value={field.value}
+                              placeholder="Seleccionar lote de materia prima"
+                              searchPlaceholder="Buscar lote..."
+                              emptyText="No hay lotes disponibles"
+                              onChange={(v) =>
+                                setValue(`materiasPrimas.${index}.loteId`, v, { shouldValidate: true })
+                              }
+                            />
+                          )}
+                        />
+                        {selectedLot && (
+                          <p className="text-xs text-muted-foreground dark:text-gray-400">
+                            Producto: {selectedLot.producto?.nombre} | Disponible: {selectedLot.cantidad}{' '}
+                            {selectedLot.unidadMedida} | Caduca:{' '}
+                            {selectedLot.fechaCaducidad ? formatDate(selectedLot.fechaCaducidad) : 'N/A'}
+                          </p>
+                        )}
+                      </div>
+                      <div className="w-40 space-y-2">
+                        <Label className="dark:text-gray-300">Cantidad *</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          placeholder="0"
+                          {...register(`materiasPrimas.${index}.cantidad`)}
+                        />
+                      </div>
+                      {fields.length > 1 && (
+                        <div className="flex flex-col justify-end">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-sm"
+                            className="text-destructive"
+                            onClick={() => remove(index)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <div className="w-32 space-y-2">
-                    <Label className="dark:text-gray-300">Cantidad *</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      placeholder="0"
-                      {...register(`materiasPrimas.${index}.cantidad`)}
-                    />
-                  </div>
-                  {fields.length > 1 && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon-sm"
-                      className="mb-0.5 text-destructive"
-                      onClick={() => remove(index)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
-              ))}
+                );
+              })}
+              {errors.materiasPrimas && !errors.materiasPrimas.message && (
+                <p className="text-sm text-destructive">Complete todas las materias primas</p>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -257,6 +320,19 @@ export function ProductionForm({ onSuccess }: ProductionFormProps) {
                 type="number"
                 placeholder="Cantidad etiquetas"
                 {...register('cantidadEtiquetas')}
+              />
+            </CardContent>
+          </Card>
+
+          <Card className="dark:border-gray-800 dark:bg-gray-900">
+            <CardHeader>
+              <CardTitle className="text-base dark:text-gray-100">Observaciones</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Textarea
+                placeholder="Observaciones adicionales..."
+                rows={4}
+                {...register('observaciones')}
               />
             </CardContent>
           </Card>

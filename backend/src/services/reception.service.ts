@@ -87,6 +87,30 @@ export class ReceptionService {
 
     const codigo = await generateReceptionCode();
 
+    // Asignar automáticamente almacén y ubicación disponible
+    const defaultWarehouse = await prisma.almacen.findFirst({
+      where: { activo: true },
+      orderBy: { creadoEn: 'asc' },
+    });
+
+    let defaultLocation: { id: string; capacidadMaxima: number | null; capacidadActual: number } | null = null;
+
+    if (defaultWarehouse) {
+      defaultLocation = await prisma.ubicacion.findFirst({
+        where: {
+          almacenId: defaultWarehouse.id,
+          activo: true,
+          OR: [
+            { capacidadMaxima: null },
+            {
+              capacidadMaxima: { not: null },
+            },
+          ],
+        },
+        orderBy: { capacidadActual: 'asc' },
+      });
+    }
+
     const reception = await this.receptionRepository.create({
       codigo,
       proveedor: { connect: { id: data.proveedorId } },
@@ -98,6 +122,9 @@ export class ReceptionService {
     });
 
     for (const loteData of data.lotes) {
+      const ubicacionId = loteData.ubicacionId || defaultLocation?.id;
+      const almacenId = defaultWarehouse?.id;
+
       const lote = await this.lotService.create(
         {
           productoId: loteData.productoId,
@@ -105,12 +132,21 @@ export class ReceptionService {
           unidadMedida: loteData.unidadMedida,
           fechaRecepcion: new Date(),
           fechaCaducidad: loteData.fechaCaducidad ? new Date(loteData.fechaCaducidad) : undefined,
-          ubicacionId: loteData.ubicacionId,
+          ubicacionId,
+          almacenId,
           numeroLoteProveedor: loteData.numeroLoteProveedor,
           recepcionId: reception.id,
         },
         userId
       );
+
+      // Actualizar capacidad ocupada de la ubicación
+      if (ubicacionId && defaultLocation && defaultLocation.capacidadMaxima) {
+        await prisma.ubicacion.update({
+          where: { id: ubicacionId },
+          data: { capacidadActual: { increment: loteData.cantidad } },
+        });
+      }
 
       await prisma.materiaPrima.create({
         data: {

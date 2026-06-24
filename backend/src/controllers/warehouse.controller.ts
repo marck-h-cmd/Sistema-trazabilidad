@@ -43,6 +43,19 @@ export class WarehouseController {
     res.status(201).json(formatApiResponse(location, 'Ubicación creada exitosamente'));
   });
 
+  updateLocation = asyncHandler(async (req: Request, res: Response) => {
+    const location = await warehouseService.updateLocation(
+      req.params.locationId,
+      req.body
+    );
+    res.json(formatApiResponse(location, 'Ubicación actualizada exitosamente'));
+  });
+
+  deleteLocation = asyncHandler(async (req: Request, res: Response) => {
+    await warehouseService.deleteLocation(req.params.locationId);
+    res.json(formatApiResponse(null, 'Ubicación desactivada exitosamente'));
+  });
+
   getLocations = asyncHandler(async (req: Request, res: Response) => {
     const locations = await warehouseService.getLocations(req.params.id);
     res.json(formatApiResponse(locations));

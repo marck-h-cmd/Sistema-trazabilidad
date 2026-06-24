@@ -248,10 +248,11 @@ export function ReceptionForm({ onSuccess }: ReceptionFormProps) {
                   </Label>
                   <Combobox
                     options={supplierOptions}
+                    value={watch('proveedorId')}
                     placeholder="Seleccionar proveedor"
                     searchPlaceholder="Buscar proveedor..."
                     emptyText="Proveedor no encontrado"
-                    onChange={(value) => setValue('proveedorId', value)}
+                    onChange={(value) => setValue('proveedorId', value, { shouldValidate: true })}
                   />
                   {errors.proveedorId && (
                     <p className="text-xs text-destructive">{errors.proveedorId.message}</p>
@@ -315,29 +316,6 @@ export function ReceptionForm({ onSuccess }: ReceptionFormProps) {
                   </div>
 
                   <div className="grid gap-3 sm:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label htmlFor="proveedorId" className="dark:text-gray-300">
-                        Proveedor *
-                      </Label>
-                      <Controller
-                        name="proveedorId"
-                        control={control}
-                        render={({ field }) => (
-                          <Combobox
-                            options={supplierOptions}
-                            placeholder="Seleccionar proveedor"
-                            searchPlaceholder="Buscar proveedor..."
-                            emptyText="Proveedor no encontrado"
-                            value={field.value}
-                            onChange={field.onChange}
-                          />
-                        )}
-                      />
-                      {errors.proveedorId && (
-                        <p className="text-xs text-destructive">{errors.proveedorId.message}</p>
-                      )}
-                    </div>
-
                     <div className="space-y-2">
                       <Label className="dark:text-gray-300">Cantidad *</Label>
                       <Input

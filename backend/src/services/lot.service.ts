@@ -26,6 +26,12 @@ export class LotService {
     if (query.estado) where.estado = query.estado as EstadoLote;
     if (query.codigo) where.codigo = { contains: query.codigo, mode: 'insensitive' };
     if (query.ubicacionId) where.ubicacionId = query.ubicacionId;
+    if (query.almacenId) where.almacenId = query.almacenId;
+
+    if (query.disponible) {
+      where.estado = 'ACTIVO';
+      where.cantidad = { gt: 0 };
+    }
 
     if (query.fechaCaducidadDesde || query.fechaCaducidadHasta) {
       where.fechaCaducidad = {};

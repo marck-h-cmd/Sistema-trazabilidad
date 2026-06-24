@@ -8,4 +8,8 @@ export const warehousesApi = {
   delete: (id: string) => api.delete(`/warehouses/${id}`),
   getLocations: (id: string) => api.get(`/warehouses/${id}/locations`),
   createLocation: (id: string, data: any) => api.post(`/warehouses/${id}/locations`, data),
+  updateLocation: (warehouseId: string, locationId: string, data: any) =>
+    api.put(`/warehouses/${warehouseId}/locations/${locationId}`, data),
+  deleteLocation: (warehouseId: string, locationId: string) =>
+    api.delete(`/warehouses/${warehouseId}/locations/${locationId}`),
 };

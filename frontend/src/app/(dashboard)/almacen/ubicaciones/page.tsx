@@ -1,31 +1,53 @@
 'use client';
 
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { warehousesApi } from '@/lib/api/warehouses.api';
+import { useAuthStore } from '@/stores/auth.store';
 import { PageHeader } from '@/components/shared/page-header';
 import { EmptyState } from '@/components/shared/empty-state';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { toast } from '@/components/ui/toast';
 import { LocationForm } from '@/components/forms/location-form';
 import { WarehouseForm } from '@/components/forms/warehouse-form';
-import { LocationPicker } from '@/components/warehouse/location-picker';
-import { 
-  MapPin, 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import {
+  MapPin,
   Plus,
   Warehouse,
   ChevronRight,
   Package,
+  Pencil,
+  Trash2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useEffect } from 'react';
 
 export default function UbicacionesPage() {
+  const queryClient = useQueryClient();
+  const { user } = useAuthStore();
+  const isAdmin = user?.rol === 'ADMINISTRADOR';
+
   const [showNewWarehouse, setShowNewWarehouse] = useState(false);
   const [showNewLocation, setShowNewLocation] = useState(false);
   const [selectedWarehouse, setSelectedWarehouse] = useState<string | null>(null);
+  const [editingWarehouse, setEditingWarehouse] = useState<any>(null);
+  const [warehouseToDelete, setWarehouseToDelete] = useState<any>(null);
+  const [editingLocation, setEditingLocation] = useState<any>(null);
+  const [locationToDelete, setLocationToDelete] = useState<any>(null);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -48,6 +70,54 @@ export default function UbicacionesPage() {
     enabled: !!selectedWarehouse,
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => warehousesApi.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['warehouses'] });
+      toast({ title: 'Almacén eliminado', variant: 'success' });
+      setWarehouseToDelete(null);
+      if (selectedWarehouse === warehouseToDelete?.id) {
+        setSelectedWarehouse(null);
+      }
+    },
+    onError: (e: any) => {
+      toast({
+        title: 'Error',
+        description: e.response?.data?.error?.message || 'No se pudo eliminar el almacén',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const handleDelete = () => {
+    if (warehouseToDelete?.id) {
+      deleteMutation.mutate(warehouseToDelete.id);
+    }
+  };
+
+  const deleteLocationMutation = useMutation({
+    mutationFn: ({ warehouseId, locationId }: { warehouseId: string; locationId: string }) =>
+      warehousesApi.deleteLocation(warehouseId, locationId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['warehouses'] });
+      toast({ title: 'Ubicación eliminada', variant: 'success' });
+      setLocationToDelete(null);
+    },
+    onError: (e: any) => {
+      toast({
+        title: 'Error',
+        description: e.response?.data?.error?.message || 'No se pudo eliminar la ubicación',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const handleDeleteLocation = () => {
+    if (selectedWarehouse && locationToDelete?.id) {
+      deleteLocationMutation.mutate({ warehouseId: selectedWarehouse, locationId: locationToDelete.id });
+    }
+  };
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -55,11 +125,19 @@ export default function UbicacionesPage() {
         description="Gestión de almacenes y ubicaciones"
       >
         <div className="flex gap-2">
-          <Button size="sm" className="gap-2" onClick={() => setShowNewWarehouse(true)}>
-            <Warehouse className="h-4 w-4" />
-            Nuevo Almacén
-          </Button>
-          <Button size="sm" variant="outline" className="gap-2 dark:border-gray-700" onClick={() => setShowNewLocation(true)}>
+          {isAdmin && (
+            <Button size="sm" className="gap-2" onClick={() => setShowNewWarehouse(true)}>
+              <Warehouse className="h-4 w-4" />
+              Nuevo Almacén
+            </Button>
+          )}
+          <Button
+            size="sm"
+            variant="outline"
+            className="gap-2 dark:border-gray-700"
+            onClick={() => setShowNewLocation(true)}
+            disabled={!selectedWarehouse}
+          >
             <Plus className="h-4 w-4" />
             Nueva Ubicación
           </Button>
@@ -97,8 +175,8 @@ export default function UbicacionesPage() {
                     )}
                     onClick={() => setSelectedWarehouse(warehouse.id)}
                   >
-                    <div>
-                      <p className="text-sm font-medium dark:text-gray-200">{warehouse.nombre}</p>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium dark:text-gray-200 truncate">{warehouse.nombre}</p>
                       <div className="flex items-center gap-2 mt-1">
                         <Badge variant="outline" className="text-xs dark:border-gray-600">{warehouse.tipo}</Badge>
                         <span className="text-xs text-muted-foreground dark:text-gray-500">
@@ -106,7 +184,35 @@ export default function UbicacionesPage() {
                         </span>
                       </div>
                     </div>
-                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    <div className="flex items-center gap-1 ml-2">
+                      {isAdmin && (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            className="h-7 w-7"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingWarehouse(warehouse);
+                            }}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            className="h-7 w-7 text-destructive hover:text-destructive"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setWarehouseToDelete(warehouse);
+                            }}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </>
+                      )}
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    </div>
                   </div>
                 ))}
               </div>
@@ -148,14 +254,38 @@ export default function UbicacionesPage() {
                     key={loc.id}
                     className="rounded-lg border p-3 dark:border-gray-700 hover:bg-muted/50 dark:hover:bg-gray-800 transition-colors"
                   >
-                    <p className="font-mono text-xs font-semibold dark:text-gray-200">{loc.codigoCompleto}</p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Badge variant="outline" className="text-[10px] dark:border-gray-600">
-                        Cap: {loc.capacidadMaxima || 'N/A'}
-                      </Badge>
-                      <span className="text-[10px] text-muted-foreground dark:text-gray-500">
-                        Ocup: {loc.capacidadActual || 0}
-                      </span>
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <p className="font-mono text-xs font-semibold dark:text-gray-200">{loc.codigoCompleto}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Badge variant="outline" className="text-[10px] dark:border-gray-600">
+                            Cap: {loc.capacidadMaxima || 'N/A'}
+                          </Badge>
+                          <span className="text-[10px] text-muted-foreground dark:text-gray-500">
+                            Ocup: {loc.capacidadActual || 0}
+                          </span>
+                        </div>
+                      </div>
+                      {isAdmin && (
+                        <div className="flex items-center gap-0.5 ml-2">
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            className="h-6 w-6"
+                            onClick={() => setEditingLocation(loc)}
+                          >
+                            <Pencil className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            className="h-6 w-6 text-destructive hover:text-destructive"
+                            onClick={() => setLocationToDelete(loc)}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -167,15 +297,89 @@ export default function UbicacionesPage() {
 
       {/* Modales */}
       {showNewWarehouse && (
-        <WarehouseForm open={showNewWarehouse} onClose={() => { setShowNewWarehouse(false); refetch(); }} />
+        <WarehouseForm
+          open={showNewWarehouse}
+          onClose={() => {
+            setShowNewWarehouse(false);
+            refetch();
+          }}
+        />
+      )}
+      {editingWarehouse && (
+        <WarehouseForm
+          open={!!editingWarehouse}
+          onClose={() => {
+            setEditingWarehouse(null);
+            refetch();
+          }}
+          warehouse={editingWarehouse}
+        />
       )}
       {showNewLocation && (
         <LocationForm
           open={showNewLocation}
-          onClose={() => { setShowNewLocation(false); refetch(); }}
+          onClose={() => {
+            setShowNewLocation(false);
+            refetch();
+          }}
           warehouseId={selectedWarehouse || ''}
+          warehouseName={selectedWarehouseData?.data?.data?.nombre || ''}
         />
       )}
+      {editingLocation && (
+        <LocationForm
+          open={!!editingLocation}
+          onClose={() => {
+            setEditingLocation(null);
+            refetch();
+          }}
+          warehouseId={selectedWarehouse || ''}
+          warehouseName={selectedWarehouseData?.data?.data?.nombre || ''}
+          location={editingLocation}
+        />
+      )}
+
+      {/* Diálogo de confirmación de eliminación de almacén */}
+      <AlertDialog open={!!warehouseToDelete} onOpenChange={() => setWarehouseToDelete(null)}>
+        <AlertDialogContent className="dark:border-gray-800 dark:bg-gray-900">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="dark:text-gray-100">¿Eliminar almacén?</AlertDialogTitle>
+            <AlertDialogDescription className="dark:text-gray-400">
+              Esta acción desactivará el almacén <strong>{warehouseToDelete?.nombre}</strong>. No se eliminarán los datos históricos.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="dark:border-gray-700 dark:text-gray-200">Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Diálogo de confirmación de eliminación de ubicación */}
+      <AlertDialog open={!!locationToDelete} onOpenChange={() => setLocationToDelete(null)}>
+        <AlertDialogContent className="dark:border-gray-800 dark:bg-gray-900">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="dark:text-gray-100">¿Eliminar ubicación?</AlertDialogTitle>
+            <AlertDialogDescription className="dark:text-gray-400">
+              Esta acción desactivará la ubicación <strong>{locationToDelete?.codigoCompleto}</strong>. No se eliminarán los datos históricos.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="dark:border-gray-700 dark:text-gray-200">Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteLocation}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

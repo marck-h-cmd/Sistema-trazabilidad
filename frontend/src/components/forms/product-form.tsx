@@ -47,7 +47,6 @@ export function ProductForm({ open, onClose, product }: ProductFormProps) {
     setValue,
     watch,
     reset,
-    control,
     formState: { errors },
   } = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),

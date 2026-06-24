@@ -559,7 +559,7 @@ model Produccion {
   humedad             Float?
   tamanoLote          Float?          @map("tamano_lote")
   rendimiento         Float?
-  
+
   // Materiales consumidos en esta producción
   materiasPrimas      MateriaPrima[]
   

@@ -21,8 +21,10 @@ import {
   Filter,
   Plus,
   MoveRight,
+  Download,
 } from 'lucide-react';
 import { formatDateTime, formatNumber } from '@/lib/formatters';
+import { exportMovementsToPDF } from '@/lib/pdf-utils';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -123,7 +125,18 @@ export default function MovimientosPage() {
         title="Movimientos de Lotes"
         description="Historial de movimientos y traslados"
       >
-        <Dialog open={openMove} onOpenChange={setOpenMove}>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2 dark:border-gray-700"
+            onClick={() => exportMovementsToPDF(movements)}
+            disabled={movements.length === 0}
+          >
+            <Download className="h-4 w-4" />
+            Exportar PDF
+          </Button>
+          <Dialog open={openMove} onOpenChange={setOpenMove}>
           <DialogTrigger asChild>
             <Button className="gap-2">
               <Plus className="h-4 w-4" />
@@ -160,6 +173,7 @@ export default function MovimientosPage() {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </PageHeader>
 
       <Card className="dark:border-gray-800 dark:bg-gray-900">

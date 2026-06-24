@@ -5,6 +5,7 @@ import productRoutes from './product.routes';
 import supplierRoutes from './supplier.routes';
 import customerRoutes from './customer.routes';
 import warehouseRoutes from './warehouse.routes';
+import lotRoutes from './lot.routes';
 import receptionRoutes from './reception.routes';
 import productionRoutes from './production.routes';
 import inventoryRoutes from './inventory.routes';
@@ -28,6 +29,7 @@ router.use('/products', productRoutes);
 router.use('/suppliers', supplierRoutes);
 router.use('/customers', customerRoutes);
 router.use('/warehouses', warehouseRoutes);
+router.use('/lots', lotRoutes);
 
 // Operaciones
 router.use('/receptions', receptionRoutes);

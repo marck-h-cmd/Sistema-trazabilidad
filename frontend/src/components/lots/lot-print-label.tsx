@@ -11,12 +11,15 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/components/ui/toast';
-import { 
-  Printer, 
+import {
+  Printer,
   Loader2,
   QrCode,
   Barcode,
+  Download,
 } from 'lucide-react';
+import { exportLabelToPDF } from '@/lib/pdf-utils';
+import { formatDate } from '@/lib/formatters';
 import type { Lot } from '@/types/lot.types';
 
 interface LotPrintLabelProps {
@@ -65,6 +68,21 @@ export function LotPrintLabel({ lot, onPrint, className }: LotPrintLabelProps) {
       lotId: lot.id,
       quantity,
       labelType,
+    });
+  };
+
+  const handleDownloadPDF = () => {
+    const toDataUrl = (img?: string) =>
+      img ? (img.startsWith('data:') ? img : `data:image/png;base64,${img}`) : undefined;
+
+    exportLabelToPDF({
+      productName: lot.producto?.nombre || 'Producto',
+      lotCode: lot.codigo,
+      productionDate: lot.fechaProduccion ? formatDate(lot.fechaProduccion) : undefined,
+      expiryDate: lot.fechaCaducidad ? formatDate(lot.fechaCaducidad) : undefined,
+      weight: `${lot.cantidad} ${lot.unidadMedida}`,
+      barcodeImage: labelType === 'CODE_128' || labelType === 'AMBOS' ? toDataUrl(barcodeData?.data?.data?.image) : undefined,
+      qrImage: labelType === 'QR' || labelType === 'AMBOS' ? toDataUrl(qrData?.data?.data?.dataUrl || qrData?.data?.data?.image) : undefined,
     });
   };
 
@@ -129,19 +147,30 @@ export function LotPrintLabel({ lot, onPrint, className }: LotPrintLabelProps) {
           qrImage={qrData?.data?.data?.dataUrl}
         />
 
-        <Button
-          className="w-full gap-2"
-          size="lg"
-          onClick={handlePrint}
-          disabled={printMutation.isPending}
-        >
-          {printMutation.isPending ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Printer className="h-4 w-4" />
-          )}
-          Imprimir {quantity} {quantity === 1 ? 'etiqueta' : 'etiquetas'}
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            className="flex-1 gap-2"
+            size="lg"
+            onClick={handlePrint}
+            disabled={printMutation.isPending}
+          >
+            {printMutation.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Printer className="h-4 w-4" />
+            )}
+            Imprimir {quantity} {quantity === 1 ? 'etiqueta' : 'etiquetas'}
+          </Button>
+          <Button
+            variant="outline"
+            size="lg"
+            className="gap-2 dark:border-gray-700"
+            onClick={handleDownloadPDF}
+          >
+            <Download className="h-4 w-4" />
+            PDF
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );

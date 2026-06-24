@@ -64,7 +64,9 @@ export interface LotQueryParams {
   estado?: string;
   codigo?: string;
   ubicacionId?: string;
+  almacenId?: string;
   fechaCaducidadDesde?: string;
   fechaCaducidadHasta?: string;
   search?: string;
+  disponible?: boolean;
 }

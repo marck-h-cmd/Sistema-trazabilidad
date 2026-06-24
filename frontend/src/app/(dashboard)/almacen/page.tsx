@@ -1,19 +1,17 @@
 'use client';
 
-import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { inventoryApi } from '@/lib/api/inventory.api';
 import { warehousesApi } from '@/lib/api/warehouses.api';
+import { lotsApi } from '@/lib/api/lots.api';
 import { PageHeader } from '@/components/shared/page-header';
-import { StatsCards } from '@/components/dashboard/stats-cards';
-import { EmptyState } from '@/components/shared/empty-state';
+import { exportInventoryToPDF } from '@/lib/pdf-utils';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
-import { InventoryGrid } from '@/components/warehouse/inventory-grid';
-import { WarehouseMap } from '@/components/warehouse/warehouse-map';
+import { LotList } from '@/components/lots/lot-list';
 import { FifoSuggestions } from '@/components/warehouse/fifo-suggestions';
 import { StockLevelIndicator } from '@/components/warehouse/stock-level-indicator';
 import { 
@@ -24,6 +22,7 @@ import {
   Clock,
   AlertTriangle,
   BarChart3,
+  Download,
 } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
@@ -34,6 +33,11 @@ export default function AlmacenPage() {
   const { data: warehouses } = useQuery({
     queryKey: ['warehouses', 'list'],
     queryFn: () => warehousesApi.getAll({ limit: 100 }),
+  });
+
+  const { data: lotsData } = useQuery({
+    queryKey: ['lots-export'],
+    queryFn: () => lotsApi.getAll({ limit: 1000 }).then((r) => r.data),
   });
 
   const { data: expiringLotes, isLoading: expiringLoading } = useQuery({
@@ -67,6 +71,16 @@ export default function AlmacenPage() {
         description="Gestión de inventario, ubicaciones y movimientos"
       >
         <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2 dark:border-gray-700"
+            onClick={() => exportInventoryToPDF(lotsData?.data || [])}
+            disabled={!lotsData?.data?.length}
+          >
+            <Download className="h-4 w-4" />
+            Exportar PDF
+          </Button>
           <Button variant="outline" size="sm" asChild>
             <Link href="/almacen/ubicaciones">
               <MapPin className="mr-2 h-4 w-4" />
@@ -133,21 +147,28 @@ export default function AlmacenPage() {
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue="overview" className="w-full">
+      <Tabs defaultValue="inventory" className="w-full">
         <TabsList>
-          <TabsTrigger value="overview" className="gap-2">
-            <BarChart3 className="h-4 w-4" />
-            Vista General
-          </TabsTrigger>
           <TabsTrigger value="inventory" className="gap-2">
             <Package className="h-4 w-4" />
             Inventario
+          </TabsTrigger>
+          <TabsTrigger value="overview" className="gap-2">
+            <BarChart3 className="h-4 w-4" />
+            Indicadores
           </TabsTrigger>
           <TabsTrigger value="fifo" className="gap-2">
             <ArrowRightLeft className="h-4 w-4" />
             FIFO
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="inventory" className="mt-4">
+          <LotList
+            onLotClick={(lot) => router.push(`/trazabilidad/${lot.codigo}`)}
+            viewMode="grid"
+          />
+        </TabsContent>
 
         <TabsContent value="overview" className="mt-4">
           <div className="grid gap-6 lg:grid-cols-2">
@@ -216,21 +237,6 @@ export default function AlmacenPage() {
               </CardContent>
             </Card>
           </div>
-        </TabsContent>
-
-        <TabsContent value="inventory" className="mt-4">
-          <Card className="dark:border-gray-800 dark:bg-gray-900">
-            <CardContent className="p-6 text-center">
-              <Package className="mx-auto h-12 w-12 text-muted-foreground dark:text-gray-600" />
-              <h3 className="mt-4 text-lg font-semibold dark:text-gray-200">Inventario Completo</h3>
-              <p className="mt-2 text-muted-foreground dark:text-gray-400">
-                Acceda al inventario detallado para buscar, filtrar y gestionar lotes
-              </p>
-              <Button className="mt-4" asChild>
-                <Link href="/almacen/inventario">Ver Inventario Completo</Link>
-              </Button>
-            </CardContent>
-          </Card>
         </TabsContent>
 
         <TabsContent value="fifo" className="mt-4">
