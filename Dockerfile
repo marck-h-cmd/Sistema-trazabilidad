@@ -23,8 +23,8 @@ ENV NEXT_PUBLIC_APP_NAME=$NEXT_PUBLIC_APP_NAME
 ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
 ENV NEXT_TELEMETRY_DISABLED=1
 
-RUN npm run build:backend
 RUN cd backend && npx prisma generate
+RUN npm run build:backend
 RUN npm run build:frontend
 
 # Runtime stage: choose which service to run via build arg or environment
