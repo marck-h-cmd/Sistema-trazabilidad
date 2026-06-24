@@ -3,8 +3,14 @@ import { ApiError } from '@utils/errors';
 import { FullTraceabilityDTO, BackwardTraceItem, ForwardTraceItem, TimelineItem, PublicTraceabilityDTO } from '@customTypes/traceability.types';
 import { formatDate } from '@utils/dateUtils';
 
+interface TraceabilityUserContext {
+  id: string;
+  rol: string;
+  clienteId?: string | null;
+}
+
 export class TraceabilityService {
-  async getFullTraceability(codigo: string): Promise<FullTraceabilityDTO> {
+  async getFullTraceability(codigo: string, user?: TraceabilityUserContext | null): Promise<FullTraceabilityDTO> {
     const lote = await prisma.lote.findUnique({
       where: { codigo },
       include: {
@@ -19,9 +25,14 @@ export class TraceabilityService {
       throw ApiError.notFound('Lote no encontrado');
     }
 
-    const backwardTrace = await this.getBackwardTrace(lote.id);
-    const forwardTrace = await this.getForwardTrace(lote.id);
-    const timeline = await this.getTimeline(lote.id);
+    const accessCache = new Map<string, Promise<void>>();
+    await this.ensureLotAccess(lote.id, user, accessCache);
+
+    const [backwardTrace, forwardTrace, timeline] = await Promise.all([
+      this.getBackwardTrace(lote.id, user, accessCache),
+      this.getForwardTrace(lote.id, user, accessCache),
+      this.getTimeline(lote.id, user, accessCache),
+    ]);
 
     return {
       lote: {
@@ -54,7 +65,13 @@ export class TraceabilityService {
     };
   }
 
-  async getBackwardTrace(loteId: string): Promise<BackwardTraceItem[]> {
+  async getBackwardTrace(
+    loteId: string,
+    user?: TraceabilityUserContext | null,
+    accessCache?: Map<string, Promise<void>>
+  ): Promise<BackwardTraceItem[]> {
+    await this.ensureLotAccess(loteId, user, accessCache);
+
     const materiasPrimas = await prisma.materiaPrima.findMany({
       where: {
         produccion: {
@@ -78,7 +95,7 @@ export class TraceabilityService {
       });
 
       if (lote?.lotePadreId) {
-        return this.getBackwardTrace(lote.lotePadreId);
+        return this.getBackwardTrace(lote.lotePadreId, user);
       }
 
       return [];
@@ -106,7 +123,13 @@ export class TraceabilityService {
     }));
   }
 
-  async getForwardTrace(loteId: string): Promise<ForwardTraceItem[]> {
+  async getForwardTrace(
+    loteId: string,
+    user?: TraceabilityUserContext | null,
+    accessCache?: Map<string, Promise<void>>
+  ): Promise<ForwardTraceItem[]> {
+    await this.ensureLotAccess(loteId, user, accessCache);
+
     const itemsExpedicion = await prisma.itemExpedicion.findMany({
       where: { loteId },
       include: {
@@ -126,7 +149,7 @@ export class TraceabilityService {
       if (lotesHijos.length > 0) {
         const traces: ForwardTraceItem[] = [];
         for (const hijo of lotesHijos) {
-          const childTraces = await this.getForwardTrace(hijo.id);
+          const childTraces = await this.getForwardTrace(hijo.id, user);
           traces.push(...childTraces);
         }
         return traces;
@@ -156,7 +179,13 @@ export class TraceabilityService {
     }));
   }
 
-  async getTimeline(loteId: string): Promise<TimelineItem[]> {
+  async getTimeline(
+    loteId: string,
+    user?: TraceabilityUserContext | null,
+    accessCache?: Map<string, Promise<void>>
+  ): Promise<TimelineItem[]> {
+    await this.ensureLotAccess(loteId, user, accessCache);
+
     const movimientos = await prisma.movimientoLote.findMany({
       where: { loteId },
       orderBy: { creadoEn: 'asc' },
@@ -231,6 +260,68 @@ export class TraceabilityService {
       informacionNutricional: (lote.metadatos as any)?.informacionNutricional || null,
       sellosCalidad: (lote.metadatos as any)?.sellosCalidad || [],
     };
+  }
+
+  private async ensureLotAccess(
+    loteId: string,
+    user?: TraceabilityUserContext | null,
+    accessCache?: Map<string, Promise<void>>
+  ): Promise<void> {
+    if (!user?.id) {
+      return;
+    }
+
+    const cacheKey = `${user.id}:${loteId}`;
+    const cached = accessCache?.get(cacheKey);
+    if (cached) {
+      await cached;
+      return;
+    }
+
+    const accessCheck = (async () => {
+      const usuario = await prisma.usuario.findUnique({
+      where: { id: user.id },
+      select: { id: true, rol: true, clienteId: true },
+    });
+
+      if (!usuario) {
+        throw ApiError.forbidden('No tiene permiso para consultar este lote');
+      }
+
+      if (usuario.rol === 'CLIENTE') {
+        const hasClientAccess = await prisma.itemExpedicion.findFirst({
+          where: {
+            loteId,
+            expedicion: {
+              clienteId: usuario.clienteId || '',
+            },
+          },
+        });
+
+        if (!hasClientAccess) {
+          throw ApiError.forbidden('No tiene permiso para consultar este lote');
+        }
+        return;
+      }
+
+      if (usuario.rol === 'AUTORIDAD') {
+        const activeAlerts = await prisma.alerta.count({
+          where: {
+            loteId,
+            estado: {
+              in: ['ABIERTA', 'INVESTIGANDO'],
+            },
+          },
+        });
+
+        if (activeAlerts === 0) {
+          throw ApiError.forbidden('No tiene permiso para consultar este lote');
+        }
+      }
+    })();
+
+    accessCache?.set(cacheKey, accessCheck);
+    await accessCheck;
   }
 
   private mapMovementType(tipo: string): TimelineItem['tipo'] {

@@ -1,11 +1,10 @@
 'use client';
 
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useParams } from 'next/navigation';
 import { traceabilityApi } from '@/lib/api/traceability.api';
 import { PageHeader } from '@/components/shared/page-header';
-import { LotCard } from '@/components/lots/lot-card';
-import { LotDetail } from '@/components/lots/lot-detail';
 import { LotTimeline } from '@/components/lots/lot-timeline';
 import { LotStatusBadge } from '@/components/lots/lot-status-badge';
 import { LotPrintLabel } from '@/components/lots/lot-print-label';
@@ -15,31 +14,27 @@ import { ForwardTrace } from '@/components/traceability/forward-trace';
 import { TraceabilityMap } from '@/components/traceability/traceability-map';
 import { EmptyState } from '@/components/shared/empty-state';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useMediaQuery } from '@/hooks/use-media-query';
 import {
   GitBranch,
   ArrowLeft,
   ArrowRight,
   MapPin,
-  Clock,
   Download,
-  Printer,
-  QrCode,
   Share2,
-  Package,
-  Factory,
-  Truck,
-  Store,
 } from 'lucide-react';
 import Link from 'next/link';
-import { cn } from '@/lib/utils';
 import { formatDate } from '@/lib/formatters';
 
 export default function TraceabilityDetailPage() {
   const params = useParams();
   const codigo = params.codigo as string;
+  const isDesktop = useMediaQuery('(min-width: 768px)');
+  const [activeTab, setActiveTab] = useState('overview');
+  const [activeAccordion, setActiveAccordion] = useState('overview');
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['traceability', codigo],
@@ -87,6 +82,31 @@ export default function TraceabilityDetailPage() {
     );
   }
 
+  const renderOverview = () => (
+    <div className="grid gap-6 lg:grid-cols-3">
+      <div className="lg:col-span-2">
+        <TraceabilityTree
+          backwardData={traceData.trazabilidadHaciaAtras}
+          forwardData={traceData.trazabilidadHaciaAdelante}
+          lote={lote}
+        />
+      </div>
+      <div className="space-y-6">
+        <LotTimeline timeline={traceData.lineaTiempo} />
+        <LotPrintLabel lot={lote} />
+      </div>
+    </div>
+  );
+
+  const renderOrigin = () => <BackwardTrace data={traceData.trazabilidadHaciaAtras} />;
+
+  const renderDestination = () => (
+    <div className="space-y-6">
+      <ForwardTrace data={traceData.trazabilidadHaciaAdelante} />
+      <TraceabilityMap timeline={traceData.lineaTiempo} />
+    </div>
+  );
+
   return (
     <div className="space-y-6">
       <PageHeader title="Trazabilidad de Lote" description={`Código: ${lote.codigo}`}>
@@ -108,7 +128,6 @@ export default function TraceabilityDetailPage() {
         </div>
       </PageHeader>
 
-      {/* Encabezado del lote */}
       <div className="rounded-xl border bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
@@ -126,13 +145,11 @@ export default function TraceabilityDetailPage() {
             </p>
           </div>
 
-          <div className="flex gap-6">
+          <div className="flex flex-wrap gap-4 sm:gap-6">
             <div className="text-center">
               <p className="text-xs text-muted-foreground dark:text-gray-500">Cantidad</p>
               <p className="text-xl font-bold dark:text-gray-100">{lote.cantidad}</p>
-              <p className="text-xs text-muted-foreground dark:text-gray-500">
-                {lote.unidadMedida}
-              </p>
+              <p className="text-xs text-muted-foreground dark:text-gray-500">{lote.unidadMedida}</p>
             </div>
             <div className="text-center">
               <p className="text-xs text-muted-foreground dark:text-gray-500">Producción</p>
@@ -149,7 +166,6 @@ export default function TraceabilityDetailPage() {
           </div>
         </div>
 
-        {/* Ubicación actual */}
         {lote.ubicacionActual && (
           <div className="mt-4 flex items-center gap-2 rounded-lg bg-muted/50 px-4 py-2.5 dark:bg-gray-800">
             <MapPin className="h-4 w-4 text-primary" />
@@ -161,55 +177,64 @@ export default function TraceabilityDetailPage() {
         )}
       </div>
 
-      {/* Tabs de trazabilidad */}
-      <Tabs defaultValue="tree" className="w-full">
-        <TabsList className="grid w-full max-w-2xl grid-cols-4">
-          <TabsTrigger value="tree" className="gap-2">
-            <GitBranch className="h-4 w-4" />
-            <span className="hidden sm:inline">Árbol</span>
-          </TabsTrigger>
-          <TabsTrigger value="backward" className="gap-2">
-            <ArrowLeft className="h-4 w-4" />
-            <span className="hidden sm:inline">Materias Primas</span>
-          </TabsTrigger>
-          <TabsTrigger value="forward" className="gap-2">
-            <ArrowRight className="h-4 w-4" />
-            <span className="hidden sm:inline">Clientes</span>
-          </TabsTrigger>
-          <TabsTrigger value="map" className="gap-2">
-            <MapPin className="h-4 w-4" />
-            <span className="hidden sm:inline">Recorrido</span>
-          </TabsTrigger>
-        </TabsList>
+      {isDesktop ? (
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full max-w-2xl grid-cols-3">
+            <TabsTrigger value="overview" className="gap-2">
+              <GitBranch className="h-4 w-4" />
+              <span className="hidden sm:inline">Resumen</span>
+            </TabsTrigger>
+            <TabsTrigger value="origin" className="gap-2">
+              <ArrowLeft className="h-4 w-4" />
+              <span className="hidden sm:inline">Origen</span>
+            </TabsTrigger>
+            <TabsTrigger value="destination" className="gap-2">
+              <ArrowRight className="h-4 w-4" />
+              <span className="hidden sm:inline">Destino</span>
+            </TabsTrigger>
+          </TabsList>
 
-        <TabsContent value="tree" className="mt-6">
-          <div className="grid gap-6 lg:grid-cols-3">
-            <div className="lg:col-span-2">
-              <TraceabilityTree
-                backwardData={traceData.trazabilidadHaciaAtras}
-                forwardData={traceData.trazabilidadHaciaAdelante}
-                lote={lote}
-              />
-            </div>
-            <div className="space-y-6">
-              <LotTimeline timeline={traceData.lineaTiempo} />
-              <LotPrintLabel lot={lote as any} />
-            </div>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="backward" className="mt-6">
-          <BackwardTrace data={traceData.trazabilidadHaciaAtras} />
-        </TabsContent>
-
-        <TabsContent value="forward" className="mt-6">
-          <ForwardTrace data={traceData.trazabilidadHaciaAdelante} />
-        </TabsContent>
-
-        <TabsContent value="map" className="mt-6">
-          <TraceabilityMap timeline={traceData.lineaTiempo} />
-        </TabsContent>
-      </Tabs>
+          <TabsContent value="overview" className="mt-6">
+            {renderOverview()}
+          </TabsContent>
+          <TabsContent value="origin" className="mt-6">
+            {renderOrigin()}
+          </TabsContent>
+          <TabsContent value="destination" className="mt-6">
+            {renderDestination()}
+          </TabsContent>
+        </Tabs>
+      ) : (
+        <Accordion type="single" collapsible value={activeAccordion} onValueChange={setActiveAccordion} className="w-full">
+          <AccordionItem value="overview">
+            <AccordionTrigger className="rounded-lg border px-4 py-3 dark:border-gray-700">
+              <div className="flex items-center gap-2">
+                <GitBranch className="h-4 w-4" />
+                Resumen de trazabilidad
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="pt-4">{renderOverview()}</AccordionContent>
+          </AccordionItem>
+          <AccordionItem value="origin">
+            <AccordionTrigger className="rounded-lg border px-4 py-3 dark:border-gray-700">
+              <div className="flex items-center gap-2">
+                <ArrowLeft className="h-4 w-4" />
+                Origen y materias primas
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="pt-4">{renderOrigin()}</AccordionContent>
+          </AccordionItem>
+          <AccordionItem value="destination">
+            <AccordionTrigger className="rounded-lg border px-4 py-3 dark:border-gray-700">
+              <div className="flex items-center gap-2">
+                <ArrowRight className="h-4 w-4" />
+                Destino y entregas
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="pt-4">{renderDestination()}</AccordionContent>
+          </AccordionItem>
+        </Accordion>
+      )}
     </div>
   );
 }

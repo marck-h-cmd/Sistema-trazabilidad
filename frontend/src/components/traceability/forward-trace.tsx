@@ -4,20 +4,17 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { StatusBadge } from '@/components/shared/status-badge';
-import { 
-  Store, 
-  Truck, 
+import {
+  Store,
+  Truck,
   Calendar,
   Hash,
-  MapPin,
-  User,
-  Phone,
 } from 'lucide-react';
 import { formatDate } from '@/lib/formatters';
 
 interface ForwardTraceProps {
-  data: any[];
-  className?: string;
+  readonly data: any[];
+  readonly className?: string;
 }
 
 export function ForwardTrace({ data, className }: ForwardTraceProps) {
@@ -45,11 +42,11 @@ export function ForwardTrace({ data, className }: ForwardTraceProps) {
       </CardHeader>
       <CardContent className="space-y-4">
         {data.map((item, index) => (
-          <div key={index}>
+          <div key={`${item.expedicion?.codigo || 'exp'}-${index}`}>
             {index > 0 && <Separator className="my-4 dark:bg-gray-700" />}
             <div className="space-y-3">
               {/* Cliente */}
-              <div className="flex items-start gap-3">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-900/30">
                   <Store className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                 </div>
@@ -61,7 +58,7 @@ export function ForwardTrace({ data, className }: ForwardTraceProps) {
                     {item.cliente?.tipo || 'N/A'} • Código: {item.cliente?.codigo || 'N/A'}
                   </p>
                 </div>
-                <Badge variant="success" className="text-xs">
+                <Badge variant="success" className="self-start text-xs">
                   {item.cantidadEnviada || 0} {item.unidadMedida || ''}
                 </Badge>
               </div>

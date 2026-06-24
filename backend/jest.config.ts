@@ -14,6 +14,10 @@ const config: Config.InitialOptions = {
     '@utils/(.*)': '<rootDir>/src/utils/$1',
     '@types/(.*)': '<rootDir>/src/types/$1',
     '@repositories/(.*)': '<rootDir>/src/repositories/$1',
+    '@queues/(.*)': '<rootDir>/src/queues/$1',
+    '@events/(.*)': '<rootDir>/src/events/$1',
+    '@jobs/(.*)': '<rootDir>/src/jobs/$1',
+    '@websocket/(.*)': '<rootDir>/src/websocket/$1',
   },
   collectCoverageFrom: ['src/**/*.ts', '!src/**/*.d.ts', '!src/server.ts'],
   coverageThreshold: {

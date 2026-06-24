@@ -1,40 +1,33 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useQuery } from '@tanstack/react-query';
-import { traceabilityApi } from '@/lib/api/traceability.api';
 import { PageHeader } from '@/components/shared/page-header';
 import { BarcodeScanner } from '@/components/scanner/barcode-scanner';
-import { ScannerResult } from '@/components/scanner/scanner-result';
-import { EmptyState } from '@/components/shared/empty-state';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Separator } from '@/components/ui/separator';
 import { DatePicker } from '@/components/ui/date-picker';
 import { Combobox } from '@/components/ui/combobox';
-import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/components/ui/toast';
 import { useScannerStore } from '@/stores/scanner.store';
 import { productsApi } from '@/lib/api/products.api';
-import { 
-  GitBranch, 
-  Search, 
+import {
+  GitBranch,
+  Search,
   Camera,
   Keyboard,
   QrCode,
   ArrowRight,
-  Loader2,
   Package,
   History,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import Link from 'next/link';
 
 const searchSchema = z.object({
@@ -42,6 +35,8 @@ const searchSchema = z.object({
 });
 
 type SearchForm = z.infer<typeof searchSchema>;
+
+const RECENT_SEARCHES_STORAGE_KEY = 'trazabilidad-recent-searches';
 
 export default function TrazabilidadPage() {
   const router = useRouter();
@@ -51,6 +46,7 @@ export default function TrazabilidadPage() {
   const [productoId, setProductoId] = useState('');
   const [fechaDesde, setFechaDesde] = useState<Date | undefined>();
   const [fechaHasta, setFechaHasta] = useState<Date | undefined>();
+  const [lastSearches, setLastSearches] = useState<string[]>([]);
 
   const { data: products } = useQuery({
     queryKey: ['products', 'all'],
@@ -61,25 +57,57 @@ export default function TrazabilidadPage() {
     register,
     handleSubmit,
     setValue,
-    watch,
     formState: { errors },
   } = useForm<SearchForm>({
     resolver: zodResolver(searchSchema),
   });
 
-  const [lastSearches] = useState<string[]>([
-    'L260625L301',
-    'L260625L201',
-    'L260624L101',
-  ]);
+  useEffect(() => {
+    if (globalThis.window === undefined) return;
+
+    try {
+      const stored = globalThis.window.localStorage.getItem(RECENT_SEARCHES_STORAGE_KEY);
+      if (!stored) return;
+
+      const parsed = JSON.parse(stored);
+      if (Array.isArray(parsed)) {
+        const normalized = parsed
+          .filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
+          .map((value) => value.trim().toUpperCase())
+          .filter((value, index, self) => self.indexOf(value) === index)
+          .slice(0, 5);
+
+        setLastSearches(normalized);
+      }
+    } catch {
+      // Ignorar búsquedas recientes inválidas almacenadas
+    }
+  }, []);
+
+  const saveRecentSearch = (code: string) => {
+    const normalized = code.trim().toUpperCase();
+    if (!normalized) return;
+
+    setLastSearches((prev) => {
+      const next = [normalized, ...prev.filter((item) => item !== normalized)].slice(0, 5);
+
+      if (globalThis.window !== undefined) {
+        globalThis.window.localStorage.setItem(RECENT_SEARCHES_STORAGE_KEY, JSON.stringify(next));
+      }
+
+      return next;
+    });
+  };
 
   const onSubmit = (data: SearchForm) => {
+    saveRecentSearch(data.codigo);
     router.push(`/trazabilidad/${data.codigo}`);
   };
 
   const handleBarcodeScan = (code: string) => {
     setValue('codigo', code);
     setShowScanner(false);
+    saveRecentSearch(code);
     toast({
       title: 'Código detectado',
       description: `Lote: ${code}`,

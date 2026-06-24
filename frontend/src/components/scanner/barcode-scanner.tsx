@@ -8,15 +8,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useScannerStore } from '@/stores/scanner.store';
 import { toast } from '@/components/ui/toast';
-import { Camera, StopCircle, FlipHorizontal, Zap, ZapOff, Keyboard } from 'lucide-react';
+import { Camera, StopCircle, FlipHorizontal, Zap, ZapOff, Keyboard, ImagePlus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface BarcodeScannerProps {
-  onScan: (code: string) => void;
-  onError?: (error: string) => void;
-  onClose?: () => void;
-  className?: string;
-  autoStart?: boolean;
+  readonly onScan: (code: string) => void;
+  readonly onError?: (error: string) => void;
+  readonly onClose?: () => void;
+  readonly className?: string;
+  readonly autoStart?: boolean;
 }
 
 export function BarcodeScanner({
@@ -32,7 +32,9 @@ export function BarcodeScanner({
   const [showManualInput, setShowManualInput] = useState(false);
   const [manualCode, setManualCode] = useState('');
   const [cameraError, setCameraError] = useState<string | null>(null);
+  const [isProcessingImage, setIsProcessingImage] = useState(false);
   const scannerRef = useRef<Html5Qrcode | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const scannerDivId = useRef(`barcode-scanner-${Math.random().toString(36).substring(7)}`);
   const { cameraFacing, torchEnabled, toggleTorch, setCameraFacing } = useScannerStore();
 
@@ -75,13 +77,14 @@ export function BarcodeScanner({
           qrbox: { width: 280, height: 180 },
         },
         (decodedText) => {
-          setLastResult(decodedText);
+          const normalizedCode = normalizeScannedCode(decodedText);
+          setLastResult(normalizedCode || decodedText);
           html5QrCode.stop().catch(console.error);
           setIsScanning(false);
-          onScan(decodedText);
+          onScan(normalizedCode || decodedText);
           toast({
             title: 'Código detectado',
-            description: decodedText,
+            description: normalizedCode || decodedText,
           });
         },
         () => {
@@ -138,17 +141,18 @@ export function BarcodeScanner({
   }, [cameraFacing, stopScanner, startScanner, setCameraFacing]);
 
   const handleTorchToggle = useCallback(async () => {
+    if (!scannerRef.current) return;
+
     try {
-      if (scannerRef.current) {
-        const capabilities = await scannerRef.current.getRunningTrackCapabilities();
-        if ((capabilities as any)?.torch) {
-          await scannerRef.current.applyVideoConstraints({
-            advanced: [{ torch: !torchEnabled }] as any,
-          });
-          toggleTorch();
-        }
+      const capabilities = scannerRef.current.getRunningTrackCapabilities() as { torch?: boolean } | null;
+      if (capabilities?.torch) {
+        await scannerRef.current.applyVideoConstraints({
+          advanced: [{ torch: !torchEnabled }] as any,
+        });
+        toggleTorch();
       }
     } catch (error) {
+      console.error('Error al cambiar la linterna:', error);
       toast({
         title: 'Linterna no disponible',
         description: 'Su dispositivo no soporta esta función',
@@ -156,10 +160,112 @@ export function BarcodeScanner({
     }
   }, [torchEnabled, toggleTorch]);
 
+  const normalizeScannedCode = useCallback((rawValue: string) => {
+    const trimmed = rawValue.trim();
+    if (!trimmed) return '';
+
+    const withoutQuotes = trimmed.replace(/^['"]|['"]$/g, '');
+
+    try {
+      const parsedUrl = new URL(withoutQuotes);
+      const pathSegments = parsedUrl.pathname.split('/').filter(Boolean);
+      const traceSegmentIndex = pathSegments.findIndex((segment) => segment === 't' || segment === 'trazabilidad');
+
+      if (traceSegmentIndex >= 0 && pathSegments[traceSegmentIndex + 1]) {
+        return pathSegments[traceSegmentIndex + 1].trim().toUpperCase();
+      }
+
+      const lastSegment = pathSegments.at(-1);
+      if (lastSegment) {
+        return lastSegment.trim().toUpperCase();
+      }
+    } catch {
+      // Ignorar URLs inválidas y continuar con el valor original
+    }
+
+    const match = /(?:\/t\/|\/trazabilidad\/)([^/?#]+)/i.exec(withoutQuotes);
+    if (match?.[1]) {
+      return match[1].trim().toUpperCase();
+    }
+
+    return withoutQuotes.trim().toUpperCase();
+  }, []);
+
   const handleManualSubmit = () => {
-    if (!manualCode.trim()) return;
-    onScan(manualCode.trim());
+    const normalizedCode = normalizeScannedCode(manualCode);
+    if (!normalizedCode) return;
+    onScan(normalizedCode);
     setManualCode('');
+  };
+
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setCameraError(null);
+    setIsProcessingImage(true);
+    setIsLoading(true);
+    setIsScanning(false);
+
+    try {
+      await stopScanner();
+
+      const formats = [
+        Html5QrcodeSupportedFormats.CODE_128,
+        Html5QrcodeSupportedFormats.EAN_13,
+        Html5QrcodeSupportedFormats.EAN_8,
+        Html5QrcodeSupportedFormats.UPC_A,
+        Html5QrcodeSupportedFormats.UPC_E,
+        Html5QrcodeSupportedFormats.QR_CODE,
+      ];
+
+      const html5QrCode = new Html5Qrcode(scannerDivId.current, {
+        formatsToSupport: formats,
+        verbose: false,
+      });
+      scannerRef.current = html5QrCode;
+
+      const decodedText = await html5QrCode.scanFile(file, false);
+      const normalizedCode = normalizeScannedCode(decodedText);
+      setLastResult(normalizedCode || decodedText);
+      onScan(normalizedCode || decodedText);
+      toast({
+        title: 'Código leído desde imagen',
+        description: normalizedCode || decodedText,
+      });
+    } catch (error: any) {
+      console.error('Error leyendo imagen:', error);
+      let errMsg = error?.message || 'No se pudo leer el código QR desde la imagen';
+
+      if (errMsg.includes('No QR code found')) {
+        errMsg = 'No se encontró un código QR o de barras legible en la imagen.';
+      } else if (errMsg.includes('Unsupported file')) {
+        errMsg = 'Formato de imagen no soportado. Prueba con JPG, PNG o WEBP.';
+      }
+
+      setCameraError(errMsg);
+      onError?.(errMsg);
+      toast({
+        title: 'No se pudo leer la imagen',
+        description: errMsg,
+        variant: 'destructive',
+      });
+    } finally {
+      try {
+        if (scannerRef.current) {
+          await Promise.resolve(scannerRef.current.clear());
+        }
+      } catch {
+        // Ignorar errores al limpiar el escáner temporal
+      }
+
+      scannerRef.current = null;
+      setIsProcessingImage(false);
+      setIsLoading(false);
+      if (event.target) {
+        event.target.value = '';
+      }
+    }
   };
 
   useEffect(() => {
@@ -192,15 +298,15 @@ export function BarcodeScanner({
 
       {/* Controles */}
       <div className="flex flex-wrap items-center gap-2">
-        {!isScanning ? (
-          <Button onClick={startScanner} className="gap-2" size="lg" disabled={isLoading}>
-            <Camera className="h-5 w-5" />
-            {isLoading ? 'Iniciando...' : 'Escanear'}
-          </Button>
-        ) : (
+        {isScanning ? (
           <Button onClick={stopScanner} variant="destructive" className="gap-2" size="lg">
             <StopCircle className="h-5 w-5" />
             Detener
+          </Button>
+        ) : (
+          <Button onClick={startScanner} className="gap-2" size="lg" disabled={isLoading}>
+            <Camera className="h-5 w-5" />
+            {isLoading ? 'Iniciando...' : 'Escanear'}
           </Button>
         )}
 
@@ -227,6 +333,17 @@ export function BarcodeScanner({
         </Button>
 
         <Button
+          onClick={() => fileInputRef.current?.click()}
+          variant="outline"
+          size="lg"
+          className="gap-2 dark:border-gray-700"
+          disabled={isLoading || isProcessingImage}
+        >
+          <ImagePlus className="h-5 w-5" />
+          {isProcessingImage ? 'Leyendo...' : 'Subir imagen'}
+        </Button>
+
+        <Button
           onClick={() => setShowManualInput(!showManualInput)}
           variant="outline"
           size="lg"
@@ -247,6 +364,14 @@ export function BarcodeScanner({
           </Button>
         )}
       </div>
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleImageUpload}
+      />
 
       {/* Input manual */}
       {showManualInput && (

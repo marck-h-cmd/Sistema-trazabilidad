@@ -3,20 +3,17 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { 
-  Package, 
-  Truck, 
+import {
+  Package,
+  Truck,
   Calendar,
   Hash,
-  Thermometer,
-  CheckCircle2,
-  XCircle,
 } from 'lucide-react';
 import { formatDate } from '@/lib/formatters';
 
 interface BackwardTraceProps {
-  data: any[];
-  className?: string;
+  readonly data: any[];
+  readonly className?: string;
 }
 
 export function BackwardTrace({ data, className }: BackwardTraceProps) {
@@ -44,11 +41,11 @@ export function BackwardTrace({ data, className }: BackwardTraceProps) {
       </CardHeader>
       <CardContent className="space-y-4">
         {data.map((item, index) => (
-          <div key={index}>
+          <div key={`${item.loteMateriaPrima?.codigo || 'lote'}-${index}`}>
             {index > 0 && <Separator className="my-4 dark:bg-gray-700" />}
             <div className="space-y-3">
               {/* Materia Prima */}
-              <div className="flex items-start gap-3">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-green-50 dark:bg-green-900/30">
                   <Package className="h-5 w-5 text-green-600 dark:text-green-400" />
                 </div>
@@ -60,7 +57,7 @@ export function BackwardTrace({ data, className }: BackwardTraceProps) {
                     SKU: {item.materiaPrima?.sku || 'N/A'}
                   </p>
                 </div>
-                <Badge variant="success" className="text-xs">
+                <Badge variant="success" className="self-start text-xs">
                   {item.cantidadUtilizada || 0} {item.unidadMedida || ''}
                 </Badge>
               </div>

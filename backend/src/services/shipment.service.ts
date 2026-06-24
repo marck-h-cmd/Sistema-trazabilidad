@@ -82,8 +82,26 @@ export class ShipmentService {
       throw ApiError.badRequest('Debe incluir al menos un lote en la expedición');
     }
 
+    const lotesParaExpedir = [] as Array<{
+      lote: Awaited<ReturnType<LotService['findById']>>;
+      cantidad: number;
+      precioUnitario?: number;
+    }>;
+
     for (const item of data.items) {
       const lote = await this.lotService.findById(item.loteId);
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      if (lote.fechaCaducidad) {
+        const fechaCaducidad = new Date(lote.fechaCaducidad);
+        fechaCaducidad.setHours(0, 0, 0, 0);
+
+        if (fechaCaducidad < today) {
+          throw ApiError.badRequest(`El lote ${lote.codigo} está caducado y no puede ser expedido`);
+        }
+      }
 
       if (lote.estado === 'VENCIDO') {
         throw ApiError.badRequest(`El lote ${lote.codigo} está vencido y no puede ser expedido`);
@@ -104,58 +122,77 @@ export class ShipmentService {
           `Stock insuficiente en lote ${lote.codigo}. Disponible: ${lote.cantidad}`
         );
       }
+
+      const alertaActiva = await prisma.alerta.count({
+        where: {
+          loteId: lote.id,
+          estado: { in: ['ABIERTA', 'INVESTIGANDO'] },
+        },
+      });
+
+      if (alertaActiva > 0) {
+        throw ApiError.badRequest(
+          `El lote ${lote.codigo} tiene una alerta sanitaria activa y no puede ser expedido`
+        );
+      }
+
+      lotesParaExpedir.push({ lote, cantidad: item.cantidad, precioUnitario: item.precioUnitario });
     }
 
     const codigo = await generateShipmentCode();
 
-    const shipment = await this.shipmentRepository.create({
-      codigo,
-      cliente: { connect: { id: data.clienteId } },
-      estado: 'PREPARANDO',
-      empresaTransporte: data.empresaTransporte,
-      matriculaVehiculo: data.matriculaVehiculo,
-      nombreConductor: data.nombreConductor,
-      fechaPrevistaEntrega: data.fechaPrevistaEntrega ? new Date(data.fechaPrevistaEntrega) : undefined,
-      preparador: { connect: { id: userId } },
-      observaciones: data.observaciones,
+    const shipment = await prisma.$transaction(async (tx) => {
+      const createdShipment = await tx.expedicion.create({
+        data: {
+          codigo,
+          cliente: { connect: { id: data.clienteId } },
+          estado: 'PREPARANDO',
+          empresaTransporte: data.empresaTransporte,
+          matriculaVehiculo: data.matriculaVehiculo,
+          nombreConductor: data.nombreConductor,
+          fechaPrevistaEntrega: data.fechaPrevistaEntrega ? new Date(data.fechaPrevistaEntrega) : undefined,
+          preparador: { connect: { id: userId } },
+          observaciones: data.observaciones,
+        },
+      });
+
+      for (const { lote, cantidad, precioUnitario } of lotesParaExpedir) {
+        await tx.itemExpedicion.create({
+          data: {
+            expedicionId: createdShipment.id,
+            loteId: lote.id,
+            cantidad,
+            unidadMedida: lote.unidadMedida,
+            precioUnitario,
+            precioTotal: precioUnitario ? precioUnitario * cantidad : undefined,
+          },
+        });
+
+        await tx.lote.update({
+          where: { id: lote.id },
+          data: {
+            cantidad: { decrement: cantidad },
+            estado: lote.cantidad - cantidad <= 0 ? 'ENTREGADO' : undefined,
+          },
+        });
+
+        await tx.movimientoLote.create({
+          data: {
+            loteId: lote.id,
+            tipo: 'EXPEDICION',
+            ubicacionOrigenId: lote.ubicacionId,
+            cantidad,
+            unidadMedida: lote.unidadMedida,
+            referenciaId: createdShipment.id,
+            referenciaTipo: 'EXPEDICION',
+            realizadoPor: userId,
+            observaciones: `Expedición ${codigo} a ${cliente.nombre}`,
+          },
+        });
+      }
+
+      return createdShipment;
     });
-
-    for (const item of data.items) {
-      const lote = await this.lotService.findById(item.loteId);
-
-      await prisma.itemExpedicion.create({
-        data: {
-          expedicionId: shipment.id,
-          loteId: item.loteId,
-          cantidad: item.cantidad,
-          unidadMedida: lote.unidadMedida,
-          precioUnitario: item.precioUnitario,
-          precioTotal: item.precioUnitario ? item.precioUnitario * item.cantidad : undefined,
-        },
-      });
-
-      await prisma.lote.update({
-        where: { id: item.loteId },
-        data: {
-          cantidad: { decrement: item.cantidad },
-          estado: lote.cantidad - item.cantidad <= 0 ? 'ENTREGADO' : undefined,
-        },
-      });
-
-      await prisma.movimientoLote.create({
-        data: {
-          loteId: item.loteId,
-          tipo: 'EXPEDICION',
-          ubicacionOrigenId: lote.ubicacionId,
-          cantidad: item.cantidad,
-          unidadMedida: lote.unidadMedida,
-          referenciaId: shipment.id,
-          referenciaTipo: 'EXPEDICION',
-          realizadoPor: userId,
-          observaciones: `Expedición ${codigo} a ${cliente.nombre}`,
-        },
-      });
-    }
 
     appEvents.emitEvent(EVENT_TYPES.SHIPMENT_CREATED, {
       shipmentId: shipment.id,
