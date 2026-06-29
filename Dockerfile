@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # Base stage: install dependencies and build both workspaces
-FROM node:20-alpine AS builder
+FROM node:26-alpine AS builder
 WORKDIR /app
 
 RUN apk add --no-cache openssl libc6-compat python3 make g++
@@ -28,7 +28,7 @@ RUN npm run build:backend
 RUN npm run build:frontend
 
 # Runtime stage: choose which service to run via build arg or environment
-FROM node:20-alpine AS runner
+FROM node:26-alpine AS runner
 WORKDIR /app
 RUN apk add --no-cache openssl libc6-compat
 
