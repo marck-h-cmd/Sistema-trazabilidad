@@ -10,15 +10,15 @@ COPY tsconfig.json ./
 COPY prisma ./prisma/
 
 # Instalar TODAS las dependencias (dev incluidas para compilar)
-RUN npm ci
+RUN npm install
 
 COPY src ./src
 
-# Generar Prisma Client para linux-musl (Alpine) FIRST (before build!)
-RUN npx prisma generate
-
 # Compilar TypeScript
 RUN npm run build
+
+# Generar Prisma Client para linux-musl (Alpine)
+RUN npx prisma generate
 
 # ─── Imagen de producción ────────────────────────────────────────────────────
 FROM node:20-alpine AS runner
@@ -37,9 +37,6 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/package*.json ./
-
-# Regenerate Prisma Client for current platform
-RUN npx prisma generate
 
 # Directorios runtime
 RUN mkdir -p uploads logs \
