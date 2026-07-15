@@ -13,6 +13,7 @@ COPY prisma ./prisma/
 RUN npm install
 
 COPY src ./src
+COPY scripts ./scripts
 
 # Compilar TypeScript
 RUN npm run build
